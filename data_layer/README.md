@@ -155,11 +155,12 @@ Positions are assigned by sorting IDs alphabetically.
 | `truck_features` | truck | 4 / 8 / 15 / 25 | fleet, with positions and cost/CO₂ ranks |
 | `order_features` | order | 20 / 50 / 120 / 200 | **the main order table** |
 | `order_truck_options` | (order, truck) pair that *may* carry it | 80 / 323 / 1317 / 4104 | which trucks can carry an order, and the solo cost/time |
-| `order_similarity` | pair of orders a < b | 190 / 1225 / 7140 / 19900 | clustering and LNS removal |
 | `scenario_summary` | scenario | 4 | difficulty overview and scoring references |
 | `order_base` | order | | internal helper; use `order_features` instead |
 
 `prep` also contains two SQL macros: `prep.drive_minutes(km)` and `prep.service_min()`.
+
+`prep` tables have no `PRIMARY KEY` constraints (they're built with `CREATE TABLE AS`). Instead, the key of every table is listed in `PREP_KEYS` in `checks.py`, and a duplicate or `NULL` key fails the build. If you add a `prep` table, add its key there too.
 
 #### `prep.city_index`: key `(scenario_id, city_id)`
 `raw.cur_cities` plus `city_pos`. Columns: `scenario_id, snapshot_id, city_id, name, country, latitude, longitude, city_pos`.
@@ -215,16 +216,6 @@ This only has pairs where the type matches (or no type is required) and `weight_
 | alone_on_time | `alone_late_min = 0` | `true` |
 | alone_fulfillable | `alone_late_min ≤ 60`, so it still counts | `true` |
 | alone_value_factor | share of the value kept: 1.0 on time … 0.5 at 60 min late … 0 beyond | `1.0` |
-
-#### `prep.order_similarity`: key `(scenario_id, a_pos, b_pos)`, with a_pos < b_pos
-How good a pair of orders is for sharing one truck. There are M·(M-1)/2 rows per scenario.
-
-| column | meaning | example |
-|---|---|---|
-| a_pos, b_pos | order positions | `2, 43` |
-| pickup_km | km between the two pickup cities | `0` |
-| delivery_km | km between the two delivery cities | `0` |
-| similarity_distance | **lower = more related**: (pickup_km + delivery_km) / (2 × longest leg) + gap between earliest pickups in days + 1 if required types differ | `0.0` (same route, same time) |
 
 #### `prep.scenario_summary`: key `scenario_id`
 | column | meaning |
@@ -322,14 +313,6 @@ FROM prep.order_features o
 JOIN prep.order_truck_options x ON x.scenario_id = o.scenario_id AND x.order_pos = o.order_pos
 WHERE o.scenario_id = 'scenario_middle'
 QUALIFY row_number() OVER (PARTITION BY o.order_id ORDER BY x.alone_cost_eur) = 1;
-
--- The 5 orders most worth combining with O007
-SELECT CASE WHEN a.order_id = 'O007' THEN b.order_id ELSE a.order_id END AS other, s.similarity_distance
-FROM prep.order_similarity s
-JOIN prep.order_features a ON a.scenario_id = s.scenario_id AND a.order_pos = s.a_pos
-JOIN prep.order_features b ON b.scenario_id = s.scenario_id AND b.order_pos = s.b_pos
-WHERE s.scenario_id = 'scenario_middle' AND 'O007' IN (a.order_id, b.order_id)
-ORDER BY s.similarity_distance LIMIT 5;
 
 -- Leaderboard: best score per scenario, algorithm and source
 SELECT scenario_id, algo, source, max(score) AS best, count(*) AS runs

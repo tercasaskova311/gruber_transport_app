@@ -16,7 +16,33 @@ class CheckFailed(Exception):
     pass
 
 
+# The grain of every prep table: these columns must identify exactly one row.
+# prep tables are built with CREATE TABLE AS (no constraints), so this check is
+# what catches a join that forgot scenario_id and duplicated rows.
+PREP_KEYS = {
+    "city_index":          ("scenario_id", "city_pos"),
+    "city_distances":      ("scenario_id", "from_pos", "to_pos"),
+    "truck_features":      ("scenario_id", "truck_pos"),
+    "order_base":          ("scenario_id", "order_pos"),
+    "order_features":      ("scenario_id", "order_pos"),
+    "order_truck_options": ("scenario_id", "order_pos", "truck_pos"),
+    "scenario_summary":    ("scenario_id",),
+}
+
+
+def _key_check_sql():
+    parts = []
+    for table, cols in PREP_KEYS.items():
+        key = ", ".join(cols)
+        parts.append(f"""SELECT '{table}' AS table_name, concat_ws(' | ', {key}) AS key, count(*) AS n_rows,
+                   bool_or({' OR '.join(f'{c} IS NULL' for c in cols)}) AS has_null
+            FROM prep.{table} GROUP BY {key}
+            HAVING count(*) > 1 OR bool_or({' OR '.join(f'{c} IS NULL' for c in cols)})""")
+    return "\n        UNION ALL\n        ".join(parts) + "\n        LIMIT 20"
+
+
 ERRORS = {
+    "duplicate or NULL key in a prep table (see PREP_KEYS)": _key_check_sql(),
     "no current snapshot": """
         SELECT 'none' WHERE (SELECT count(*) FROM raw.cur_snapshots) = 0""",
     "counts differ from /Scenarios": """
