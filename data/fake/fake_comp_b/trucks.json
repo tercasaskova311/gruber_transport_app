@@ -1,0 +1,202 @@
+[
+ {
+  "id": "T01",
+  "start_city": "C027",
+  "capacity_kg": 18000,
+  "type": "standard",
+  "cost_per_km": 1.54,
+  "co2_per_km": 0.84
+ },
+ {
+  "id": "T02",
+  "start_city": "C023",
+  "capacity_kg": 8000,
+  "type": "refrigerated",
+  "cost_per_km": 1.49,
+  "co2_per_km": 0.93
+ },
+ {
+  "id": "T03",
+  "start_city": "C006",
+  "capacity_kg": 18000,
+  "type": "standard",
+  "cost_per_km": 1.24,
+  "co2_per_km": 1.1
+ },
+ {
+  "id": "T04",
+  "start_city": "C037",
+  "capacity_kg": 8000,
+  "type": "standard",
+  "cost_per_km": 1.4,
+  "co2_per_km": 0.75
+ },
+ {
+  "id": "T05",
+  "start_city": "C036",
+  "capacity_kg": 24000,
+  "type": "standard",
+  "cost_per_km": 1.32,
+  "co2_per_km": 0.8
+ },
+ {
+  "id": "T06",
+  "start_city": "C029",
+  "capacity_kg": 18000,
+  "type": "hazmat",
+  "cost_per_km": 1.42,
+  "co2_per_km": 0.63
+ },
+ {
+  "id": "T07",
+  "start_city": "C029",
+  "capacity_kg": 8000,
+  "type": "refrigerated",
+  "cost_per_km": 1.13,
+  "co2_per_km": 0.75
+ },
+ {
+  "id": "T08",
+  "start_city": "C001",
+  "capacity_kg": 12000,
+  "type": "standard",
+  "cost_per_km": 1.3,
+  "co2_per_km": 0.91
+ },
+ {
+  "id": "T09",
+  "start_city": "C015",
+  "capacity_kg": 24000,
+  "type": "standard",
+  "cost_per_km": 1.01,
+  "co2_per_km": 0.64
+ },
+ {
+  "id": "T10",
+  "start_city": "C043",
+  "capacity_kg": 24000,
+  "type": "refrigerated",
+  "cost_per_km": 0.92,
+  "co2_per_km": 0.83
+ },
+ {
+  "id": "T11",
+  "start_city": "C006",
+  "capacity_kg": 12000,
+  "type": "standard",
+  "cost_per_km": 1.37,
+  "co2_per_km": 0.76
+ },
+ {
+  "id": "T12",
+  "start_city": "C044",
+  "capacity_kg": 12000,
+  "type": "standard",
+  "cost_per_km": 1.28,
+  "co2_per_km": 1.09
+ },
+ {
+  "id": "T13",
+  "start_city": "C020",
+  "capacity_kg": 24000,
+  "type": "standard",
+  "cost_per_km": 1.54,
+  "co2_per_km": 0.69
+ },
+ {
+  "id": "T14",
+  "start_city": "C024",
+  "capacity_kg": 8000,
+  "type": "standard",
+  "cost_per_km": 1.39,
+  "co2_per_km": 0.92
+ },
+ {
+  "id": "T15",
+  "start_city": "C043",
+  "capacity_kg": 24000,
+  "type": "standard",
+  "cost_per_km": 1.14,
+  "co2_per_km": 0.77
+ },
+ {
+  "id": "T16",
+  "start_city": "C041",
+  "capacity_kg": 8000,
+  "type": "standard",
+  "cost_per_km": 1.49,
+  "co2_per_km": 0.91
+ },
+ {
+  "id": "T17",
+  "start_city": "C025",
+  "capacity_kg": 12000,
+  "type": "refrigerated",
+  "cost_per_km": 1.19,
+  "co2_per_km": 1.01
+ },
+ {
+  "id": "T18",
+  "start_city": "C019",
+  "capacity_kg": 18000,
+  "type": "standard",
+  "cost_per_km": 1.19,
+  "co2_per_km": 0.73
+ },
+ {
+  "id": "T19",
+  "start_city": "C003",
+  "capacity_kg": 24000,
+  "type": "standard",
+  "cost_per_km": 1.47,
+  "co2_per_km": 0.83
+ },
+ {
+  "id": "T20",
+  "start_city": "C027",
+  "capacity_kg": 12000,
+  "type": "hazmat",
+  "cost_per_km": 1.0,
+  "co2_per_km": 0.99
+ },
+ {
+  "id": "T21",
+  "start_city": "C044",
+  "capacity_kg": 8000,
+  "type": "standard",
+  "cost_per_km": 0.98,
+  "co2_per_km": 1.06
+ },
+ {
+  "id": "T22",
+  "start_city": "C022",
+  "capacity_kg": 12000,
+  "type": "standard",
+  "cost_per_km": 1.07,
+  "co2_per_km": 0.83
+ },
+ {
+  "id": "T23",
+  "start_city": "C044",
+  "capacity_kg": 24000,
+  "type": "refrigerated",
+  "cost_per_km": 1.5,
+  "co2_per_km": 0.73
+ },
+ {
+  "id": "T24",
+  "start_city": "C001",
+  "capacity_kg": 8000,
+  "type": "hazmat",
+  "cost_per_km": 1.33,
+  "co2_per_km": 0.67
+ },
+ {
+  "id": "T25",
+  "start_city": "C010",
+  "capacity_kg": 18000,
+  "type": "standard",
+  "cost_per_km": 1.5,
+  "co2_per_km": 0.99
+ }
+]

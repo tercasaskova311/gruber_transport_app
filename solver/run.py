@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 from compare import compare
+from configs import CONFIGS
 from instance import load_instance
 from solver import alns, check_plan, construct
 
@@ -32,11 +33,13 @@ def main():
     ap.add_argument("--time", type=float, default=60, help="ALNS time limit in seconds")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--config", default="default", choices=sorted(CONFIGS), help="see configs.py")
+    ap.add_argument("--out", default=None, help="output folder (default: <scenario_dir>/out)")
     args = ap.parse_args()
 
     inst = load_instance(args.scenario_dir)
-    out = Path(args.scenario_dir) / "out"
-    out.mkdir(exist_ok=True)
+    out = Path(args.out) if args.out else Path(args.scenario_dir) / "out"
+    out.mkdir(parents=True, exist_ok=True)
     print(f"Loaded {len(inst.trucks)} trucks, {inst.n_orders} orders, {len(inst.city_ids)} cities")
 
     t0 = time.time()
@@ -50,7 +53,9 @@ def main():
     assert not check_plan(inst, initial), check_plan(inst, initial)
 
     print(f"[5] ALNS for {args.time:.0f}s …")
-    best, log = alns(inst, initial, time_limit=args.time, seed=args.seed, verbose=not args.quiet)
+    t_construct = time.time() - t0
+    best, log = alns(inst, initial, time_limit=args.time, seed=args.seed, verbose=not args.quiet,
+                     **CONFIGS[args.config])
     issues = check_plan(inst, best)
     assert not issues, issues
     print(f"    {log.iterations} iterations, best score {best.S:.2f}")
@@ -62,6 +67,10 @@ def main():
     (out / "compare.json").write_text(json.dumps(data, indent=1), encoding="utf-8")
     (out / "operators.json").write_text(json.dumps({"destroy": log.destroy_stats, "repair": log.repair_stats,
                                                     "iterations": log.iterations}, indent=1), encoding="utf-8")
+    (out / "result.json").write_text(json.dumps({
+        "config": args.config, "seed": args.seed, "time": args.time, "score": best.S,
+        "initial_score": initial.S, "iterations": log.iterations,
+        "construct_s": round(t_construct, 2), "total_s": round(time.time() - t0, 2)}, indent=1), encoding="utf-8")
     with open(out / "history.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["iteration", "seconds", "best_score"])
