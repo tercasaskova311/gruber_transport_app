@@ -28,11 +28,12 @@ REST_MIN = 660                 # 11 h
 LATE_GRACE_MIN = 60            # up to 60 min late = still fulfilled
 LATE_MIN_FACTOR = 0.5          # value at 60 min late
 
-# ---------------- ⚠ assumptions to verify against /Simulate ----------------
-CEIL_PER_LEG = True                 # ceil(km*60/70) per leg (vs. on total km)
-BREAKS_MID_LEG = True               # a break/rest may interrupt a long leg
-WAIT_PLUS_SERVICE_COUNTS = True     # wait+service >= 45 min resets the 4.5 h counter
-LATENESS_AT_ARRIVAL = True          # lateness = arrival - to (vs. service start)
+# ---------------- time rules, verified against /Simulate (see docs/semantics.md) ----------------
+# - driving minutes = ceil(km * 60 / 70) per leg; a break/rest may interrupt a leg
+# - "idle" = minutes standing still (waiting + service) since the truck last drove, summed
+#   over consecutive same-city stops. Idle >= 45 before driving resets the 4.5 h counter.
+#   When a break/rest is due, only the missing part (45 - idle, 660 - idle) is inserted.
+# - lateness = arrival - to; an order late at both stops counts the larger lateness.
 
 # ---------------- optional realism (NOT in the official score) ----------------
 # The official score has no planning horizon, so a truck may get a 3-week route.
@@ -112,7 +113,7 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
     picked: set[int] = set()
     stop_late: list[float] = []
     if base is not None and start > 0 and base.states:
-        (city, now, sb, sr, brk, load, km, loaded_km, load_km, max_load, drive_total) = base.states[start]
+        (city, now, sb, sr, brk, idle, load, km, loaded_km, load_km, max_load, drive_total) = base.states[start]
         for (is_p, oi), lm in zip(route[:start], base.stop_late):
             if is_p:
                 picked.add(oi)
@@ -124,13 +125,14 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
     else:
         city = t.start
         now = sb = sr = brk = 0.0              # clock, since break, since rest, break+rest total
+        idle = 0.0                             # standing still since last drive
         load = km = loaded_km = load_km = max_load = 0.0
         drive_total = 0
         i0 = 0
     states = None
     if record:
         states = base.states[:start + 1] if (base is not None and start > 0 and base.states) else \
-            [(city, now, sb, sr, brk, load, km, loaded_km, load_km, max_load, drive_total)]
+            [(city, now, sb, sr, brk, idle, load, km, loaded_km, load_km, max_load, drive_total)]
     feasible = True
     cap_kg = t.capacity + 1e-9
 
@@ -144,20 +146,26 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
             if load > 0:
                 loaded_km += d
                 load_km += load * d
-            rem = math.ceil(d * 60 / SPEED_KMH) if CEIL_PER_LEG else d * 60 / SPEED_KMH
+            rem = math.ceil(d * 60 / SPEED_KMH)
             drive_total += rem
-            # drive, inserting 45-min breaks / 11-h rests
+            # standing still long enough before driving counts as a rest / break
+            if idle >= REST_MIN:                # unverified (unreachable with current data)
+                sb = sr = 0
+            elif idle >= BREAK_MIN:
+                sb = 0
+            # drive, inserting breaks / rests; standing time counts toward the pause
             while rem > 0:
+                if sr >= REST_AFTER_MIN:
+                    add = REST_MIN - idle if idle < REST_MIN else 0
+                    now += add; brk += add; sb = 0; sr = 0
+                elif sb >= BREAK_AFTER_MIN:
+                    add = BREAK_MIN - idle if idle < BREAK_MIN else 0
+                    now += add; brk += add; sb = 0
+                idle = 0
                 cap = BREAK_AFTER_MIN - sb
                 if REST_AFTER_MIN - sr < cap:
                     cap = REST_AFTER_MIN - sr
-                if cap <= 0:
-                    if sr >= REST_AFTER_MIN:
-                        now += REST_MIN; brk += REST_MIN; sb = 0; sr = 0
-                    else:
-                        now += BREAK_MIN; brk += BREAK_MIN; sb = 0
-                    continue
-                if not BREAKS_MID_LEG or rem < cap:
+                if rem < cap:
                     cap = rem
                 now += cap; sb += cap; sr += cap; rem -= cap
             city = dest
@@ -170,7 +178,7 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
             if arrival < a:
                 wait = a - arrival
                 now = a
-            ref = arrival if LATENESS_AT_ARRIVAL else now
+            ref = arrival
             if ref > b:
                 lm = ref - b
                 if lm > LATE_GRACE_MIN and early_exit:
@@ -178,8 +186,7 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
                 if lm > late.get(oi, 0.0):
                     late[oi] = lm
         now += SERVICE_MIN
-        if (wait + SERVICE_MIN if WAIT_PLUS_SERVICE_COUNTS else max(wait, SERVICE_MIN)) >= BREAK_MIN:
-            sb = 0
+        idle += wait + SERVICE_MIN          # adds up over same-city stops (no driving between)
         if is_p:
             load += o.weight
             picked.add(oi)
@@ -197,7 +204,7 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
             load -= o.weight
         if record:
             stop_late.append(lm)
-            states.append((city, now, sb, sr, brk, load, km, loaded_km, load_km, max_load, drive_total))
+            states.append((city, now, sb, sr, brk, idle, load, km, loaded_km, load_km, max_load, drive_total))
 
     if MAX_FINISH_MIN is not None and now > MAX_FINISH_MIN:
         if early_exit:

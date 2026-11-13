@@ -41,21 +41,22 @@ No dependencies beyond the Python 3.10+ standard library.
 - Positions are pre-ranked by extra km; only the best few are fully simulated (4× more for time-window orders).
 - Insertions are cached per (order, truck); after a move only the changed truck is recomputed.
 
-## Swapping in Part B's simulator
+## Time rules (verified against the API)
 
-The solver only calls `simulate_truck(...)` and `score(...)` from `evaluator.py`. Once B's `sim.py` matches the API, either make its rules identical to `evaluator.py`, or wrap B's functions with the same signatures.
+`evaluator.py` follows the API's behaviour as established in `docs/semantics.md`
+(156 Simulate/Score responses reproduced exactly by `gruber/simulator.py`):
 
-## ⚠ Assumptions to test against `/Simulate` (top of `evaluator.py`)
+- driving minutes = `ceil(km * 60 / 70)` per leg; a break or rest can interrupt a leg;
+- time spent standing still (waiting + service, summed over consecutive stops in the same city)
+  counts toward the next pause: only `45 - standing` (break) or `660 - standing` (rest) is added,
+  and standing >= 45 min before driving resets the 4.5 h counter;
+- lateness = arrival - `to`; an order late at both stops counts the larger lateness.
 
-| Flag | Current guess |
-|---|---|
-| `CEIL_PER_LEG` | `ceil` applied to each leg's driving minutes |
-| `BREAKS_MID_LEG` | a break or rest can interrupt a long drive |
-| `WAIT_PLUS_SERVICE_COUNTS` | waiting + service ≥ 45 min resets the 4.5 h counter |
-| `LATENESS_AT_ARRIVAL` | lateness measured on arrival |
-| `GENERIC_WINDOW_APPLIES_TO` (in `instance.py`) | a plain `time_window` field applies to the delivery |
+The API's time windows are `pickup_window` / `delivery_window` = `{"from", "to"}` in minutes or `null`.
 
-Time-window field names in the real JSON are unknown. `instance.py` accepts several shapes and fails loudly if it can't parse one.
+`tests/test_solver_evaluator.py` checks `simulate_truck` against `gruber.simulator` on random
+routes from the saved snapshots (km, cost, CO2, finish time, driving, breaks, value) and checks
+that resuming from a saved state equals a full simulation. Run `python -m pytest -q tests`.
 
 `MAX_FINISH_MIN` (off by default) caps route length for a more realistic demo. The official score has no planning horizon, so the score-maximizing plan can give one truck a very long route.
 
