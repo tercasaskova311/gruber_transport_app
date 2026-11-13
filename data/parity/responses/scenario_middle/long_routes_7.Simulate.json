@@ -1,0 +1,1459 @@
+{
+ "snapshot": "20261113_192945",
+ "plan": {
+  "T04": [
+   {
+    "action": "pickup",
+    "order": "O004"
+   },
+   {
+    "action": "pickup",
+    "order": "O033"
+   },
+   {
+    "action": "pickup",
+    "order": "O023"
+   },
+   {
+    "action": "pickup",
+    "order": "O048"
+   },
+   {
+    "action": "delivery",
+    "order": "O004"
+   },
+   {
+    "action": "pickup",
+    "order": "O030"
+   },
+   {
+    "action": "delivery",
+    "order": "O023"
+   },
+   {
+    "action": "pickup",
+    "order": "O009"
+   },
+   {
+    "action": "pickup",
+    "order": "O012"
+   },
+   {
+    "action": "delivery",
+    "order": "O048"
+   },
+   {
+    "action": "pickup",
+    "order": "O044"
+   },
+   {
+    "action": "delivery",
+    "order": "O030"
+   },
+   {
+    "action": "delivery",
+    "order": "O012"
+   },
+   {
+    "action": "pickup",
+    "order": "O002"
+   },
+   {
+    "action": "delivery",
+    "order": "O002"
+   },
+   {
+    "action": "pickup",
+    "order": "O041"
+   },
+   {
+    "action": "delivery",
+    "order": "O009"
+   },
+   {
+    "action": "pickup",
+    "order": "O045"
+   },
+   {
+    "action": "pickup",
+    "order": "O047"
+   },
+   {
+    "action": "delivery",
+    "order": "O045"
+   },
+   {
+    "action": "delivery",
+    "order": "O044"
+   },
+   {
+    "action": "delivery",
+    "order": "O047"
+   },
+   {
+    "action": "delivery",
+    "order": "O033"
+   },
+   {
+    "action": "pickup",
+    "order": "O011"
+   },
+   {
+    "action": "pickup",
+    "order": "O017"
+   },
+   {
+    "action": "pickup",
+    "order": "O037"
+   },
+   {
+    "action": "delivery",
+    "order": "O041"
+   },
+   {
+    "action": "delivery",
+    "order": "O037"
+   },
+   {
+    "action": "delivery",
+    "order": "O011"
+   },
+   {
+    "action": "delivery",
+    "order": "O017"
+   },
+   {
+    "action": "pickup",
+    "order": "O021"
+   },
+   {
+    "action": "pickup",
+    "order": "O001"
+   },
+   {
+    "action": "pickup",
+    "order": "O026"
+   },
+   {
+    "action": "delivery",
+    "order": "O001"
+   },
+   {
+    "action": "pickup",
+    "order": "O003"
+   },
+   {
+    "action": "delivery",
+    "order": "O003"
+   },
+   {
+    "action": "pickup",
+    "order": "O019"
+   },
+   {
+    "action": "pickup",
+    "order": "O008"
+   },
+   {
+    "action": "delivery",
+    "order": "O021"
+   },
+   {
+    "action": "delivery",
+    "order": "O026"
+   },
+   {
+    "action": "pickup",
+    "order": "O028"
+   },
+   {
+    "action": "pickup",
+    "order": "O049"
+   },
+   {
+    "action": "delivery",
+    "order": "O019"
+   },
+   {
+    "action": "delivery",
+    "order": "O049"
+   },
+   {
+    "action": "delivery",
+    "order": "O008"
+   },
+   {
+    "action": "pickup",
+    "order": "O034"
+   },
+   {
+    "action": "delivery",
+    "order": "O028"
+   },
+   {
+    "action": "delivery",
+    "order": "O034"
+   }
+  ],
+  "T07": [
+   {
+    "action": "pickup",
+    "order": "O015"
+   },
+   {
+    "action": "pickup",
+    "order": "O035"
+   },
+   {
+    "action": "delivery",
+    "order": "O035"
+   },
+   {
+    "action": "pickup",
+    "order": "O025"
+   },
+   {
+    "action": "pickup",
+    "order": "O043"
+   },
+   {
+    "action": "pickup",
+    "order": "O007"
+   },
+   {
+    "action": "pickup",
+    "order": "O022"
+   },
+   {
+    "action": "delivery",
+    "order": "O043"
+   },
+   {
+    "action": "pickup",
+    "order": "O029"
+   },
+   {
+    "action": "pickup",
+    "order": "O042"
+   },
+   {
+    "action": "delivery",
+    "order": "O022"
+   },
+   {
+    "action": "pickup",
+    "order": "O050"
+   },
+   {
+    "action": "delivery",
+    "order": "O007"
+   },
+   {
+    "action": "pickup",
+    "order": "O013"
+   },
+   {
+    "action": "delivery",
+    "order": "O013"
+   },
+   {
+    "action": "delivery",
+    "order": "O025"
+   },
+   {
+    "action": "pickup",
+    "order": "O027"
+   },
+   {
+    "action": "delivery",
+    "order": "O015"
+   },
+   {
+    "action": "pickup",
+    "order": "O014"
+   },
+   {
+    "action": "pickup",
+    "order": "O036"
+   },
+   {
+    "action": "delivery",
+    "order": "O029"
+   },
+   {
+    "action": "delivery",
+    "order": "O014"
+   },
+   {
+    "action": "delivery",
+    "order": "O050"
+   },
+   {
+    "action": "pickup",
+    "order": "O010"
+   },
+   {
+    "action": "delivery",
+    "order": "O010"
+   },
+   {
+    "action": "pickup",
+    "order": "O006"
+   },
+   {
+    "action": "delivery",
+    "order": "O042"
+   },
+   {
+    "action": "pickup",
+    "order": "O031"
+   },
+   {
+    "action": "pickup",
+    "order": "O005"
+   },
+   {
+    "action": "delivery",
+    "order": "O027"
+   },
+   {
+    "action": "delivery",
+    "order": "O006"
+   },
+   {
+    "action": "pickup",
+    "order": "O040"
+   },
+   {
+    "action": "delivery",
+    "order": "O040"
+   },
+   {
+    "action": "pickup",
+    "order": "O032"
+   },
+   {
+    "action": "pickup",
+    "order": "O016"
+   },
+   {
+    "action": "delivery",
+    "order": "O036"
+   },
+   {
+    "action": "delivery",
+    "order": "O005"
+   },
+   {
+    "action": "pickup",
+    "order": "O024"
+   },
+   {
+    "action": "delivery",
+    "order": "O016"
+   },
+   {
+    "action": "pickup",
+    "order": "O018"
+   },
+   {
+    "action": "delivery",
+    "order": "O024"
+   },
+   {
+    "action": "pickup",
+    "order": "O046"
+   },
+   {
+    "action": "delivery",
+    "order": "O046"
+   },
+   {
+    "action": "pickup",
+    "order": "O039"
+   },
+   {
+    "action": "pickup",
+    "order": "O038"
+   },
+   {
+    "action": "delivery",
+    "order": "O039"
+   },
+   {
+    "action": "delivery",
+    "order": "O038"
+   },
+   {
+    "action": "delivery",
+    "order": "O032"
+   },
+   {
+    "action": "delivery",
+    "order": "O018"
+   },
+   {
+    "action": "pickup",
+    "order": "O020"
+   },
+   {
+    "action": "delivery",
+    "order": "O020"
+   },
+   {
+    "action": "delivery",
+    "order": "O031"
+   }
+  ]
+ },
+ "response": {
+  "total_km": 37913,
+  "loaded_km": 37082,
+  "empty_km": 831,
+  "total_cost": 77131.44,
+  "total_co2": 43331.23,
+  "orders_fulfilled": 43,
+  "orders_total": 50,
+  "value_fulfilled": 48,
+  "value_lost_to_lateness": 0,
+  "value_total": 59,
+  "truck_utilization": 0.5834,
+  "orders_late": 7,
+  "orders_too_late": 7,
+  "total_late_min": 223297,
+  "penalized_late_min": 0,
+  "trucks": [
+   {
+    "truck": "T04",
+    "route": [
+     "C014",
+     "C120",
+     "C010",
+     "C011",
+     "C053",
+     "C045",
+     "C014",
+     "C018",
+     "C062",
+     "C107",
+     "C130",
+     "C045",
+     "C120",
+     "C022",
+     "C066",
+     "C018",
+     "C120",
+     "C008",
+     "C011",
+     "C126",
+     "C011",
+     "C008",
+     "C062",
+     "C022",
+     "C118",
+     "C062",
+     "C018",
+     "C008",
+     "C107",
+     "C120",
+     "C010",
+     "C014",
+     "C107",
+     "C011",
+     "C022",
+     "C045",
+     "C080",
+     "C130",
+     "C107",
+     "C011",
+     "C045",
+     "C060",
+     "C080",
+     "C024",
+     "C130"
+    ],
+    "total_km": 18077,
+    "loaded_km": 17487,
+    "empty_km": 590,
+    "cost": 39046.32,
+    "co2": 21511.63,
+    "max_load_kg": 23800,
+    "utilization": 0.5969,
+    "finish_min": 36737,
+    "driving_min": 15512,
+    "break_and_rest_min": 19785,
+    "schedule": [
+     {
+      "action": "pickup",
+      "order": "O004",
+      "city": "C120",
+      "arrival_min": 210,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 240
+     },
+     {
+      "action": "pickup",
+      "order": "O033",
+      "city": "C010",
+      "arrival_min": 555,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 585
+     },
+     {
+      "action": "pickup",
+      "order": "O023",
+      "city": "C011",
+      "arrival_min": 1364,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 1394
+     },
+     {
+      "action": "pickup",
+      "order": "O048",
+      "city": "C053",
+      "arrival_min": 1798,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 1828
+     },
+     {
+      "action": "delivery",
+      "order": "O004",
+      "city": "C053",
+      "arrival_min": 1828,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 1858
+     },
+     {
+      "action": "pickup",
+      "order": "O030",
+      "city": "C045",
+      "arrival_min": 2713,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 2743
+     },
+     {
+      "action": "delivery",
+      "order": "O023",
+      "city": "C014",
+      "arrival_min": 3106,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 3136
+     },
+     {
+      "action": "pickup",
+      "order": "O009",
+      "city": "C018",
+      "arrival_min": 4131,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 4161
+     },
+     {
+      "action": "pickup",
+      "order": "O012",
+      "city": "C062",
+      "arrival_min": 5437,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 5467
+     },
+     {
+      "action": "delivery",
+      "order": "O048",
+      "city": "C107",
+      "arrival_min": 6728,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 6758
+     },
+     {
+      "action": "pickup",
+      "order": "O044",
+      "city": "C107",
+      "arrival_min": 6758,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 6788
+     },
+     {
+      "action": "delivery",
+      "order": "O030",
+      "city": "C107",
+      "arrival_min": 6788,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 6818
+     },
+     {
+      "action": "delivery",
+      "order": "O012",
+      "city": "C130",
+      "arrival_min": 7992,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 8022
+     },
+     {
+      "action": "pickup",
+      "order": "O002",
+      "city": "C045",
+      "arrival_min": 9209,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 9239
+     },
+     {
+      "action": "delivery",
+      "order": "O002",
+      "city": "C120",
+      "arrival_min": 10450,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 10480
+     },
+     {
+      "action": "pickup",
+      "order": "O041",
+      "city": "C022",
+      "arrival_min": 10988,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 11018
+     },
+     {
+      "action": "delivery",
+      "order": "O009",
+      "city": "C066",
+      "arrival_min": 12197,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 12227
+     },
+     {
+      "action": "pickup",
+      "order": "O045",
+      "city": "C018",
+      "arrival_min": 13392,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 13422
+     },
+     {
+      "action": "pickup",
+      "order": "O047",
+      "city": "C120",
+      "arrival_min": 14661,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 14691
+     },
+     {
+      "action": "delivery",
+      "order": "O045",
+      "city": "C008",
+      "arrival_min": 15657,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 15687
+     },
+     {
+      "action": "delivery",
+      "order": "O044",
+      "city": "C011",
+      "arrival_min": 15795,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 15825
+     },
+     {
+      "action": "delivery",
+      "order": "O047",
+      "city": "C126",
+      "arrival_min": 16892,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 16922
+     },
+     {
+      "action": "delivery",
+      "order": "O033",
+      "city": "C011",
+      "arrival_min": 17329,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 17359
+     },
+     {
+      "action": "pickup",
+      "order": "O011",
+      "city": "C008",
+      "arrival_min": 18127,
+      "wait_min": 0,
+      "late_min": 17827,
+      "departure_min": 18157
+     },
+     {
+      "action": "pickup",
+      "order": "O017",
+      "city": "C062",
+      "arrival_min": 18517,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 18547
+     },
+     {
+      "action": "pickup",
+      "order": "O037",
+      "city": "C022",
+      "arrival_min": 19782,
+      "wait_min": 0,
+      "late_min": 19512,
+      "departure_min": 19812
+     },
+     {
+      "action": "delivery",
+      "order": "O041",
+      "city": "C118",
+      "arrival_min": 20823,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 20853
+     },
+     {
+      "action": "delivery",
+      "order": "O037",
+      "city": "C062",
+      "arrival_min": 22018,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 22048
+     },
+     {
+      "action": "delivery",
+      "order": "O011",
+      "city": "C018",
+      "arrival_min": 23324,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 23354
+     },
+     {
+      "action": "delivery",
+      "order": "O017",
+      "city": "C008",
+      "arrival_min": 23657,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 23687
+     },
+     {
+      "action": "pickup",
+      "order": "O021",
+      "city": "C107",
+      "arrival_min": 24643,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 24673
+     },
+     {
+      "action": "pickup",
+      "order": "O001",
+      "city": "C120",
+      "arrival_min": 25845,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 25875
+     },
+     {
+      "action": "pickup",
+      "order": "O026",
+      "city": "C010",
+      "arrival_min": 26190,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 26220
+     },
+     {
+      "action": "delivery",
+      "order": "O001",
+      "city": "C014",
+      "arrival_min": 26280,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 26310
+     },
+     {
+      "action": "pickup",
+      "order": "O003",
+      "city": "C107",
+      "arrival_min": 27293,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 27323
+     },
+     {
+      "action": "delivery",
+      "order": "O003",
+      "city": "C011",
+      "arrival_min": 27560,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 27590
+     },
+     {
+      "action": "pickup",
+      "order": "O019",
+      "city": "C022",
+      "arrival_min": 27740,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 27770
+     },
+     {
+      "action": "pickup",
+      "order": "O008",
+      "city": "C045",
+      "arrival_min": 28863,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 28893
+     },
+     {
+      "action": "delivery",
+      "order": "O021",
+      "city": "C080",
+      "arrival_min": 29968,
+      "wait_min": 0,
+      "late_min": 29563,
+      "departure_min": 29998
+     },
+     {
+      "action": "delivery",
+      "order": "O026",
+      "city": "C130",
+      "arrival_min": 31223,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 31253
+     },
+     {
+      "action": "pickup",
+      "order": "O028",
+      "city": "C107",
+      "arrival_min": 32427,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 32457
+     },
+     {
+      "action": "pickup",
+      "order": "O049",
+      "city": "C011",
+      "arrival_min": 32694,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 32724
+     },
+     {
+      "action": "delivery",
+      "order": "O019",
+      "city": "C045",
+      "arrival_min": 33707,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 33737
+     },
+     {
+      "action": "delivery",
+      "order": "O049",
+      "city": "C060",
+      "arrival_min": 34114,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 34144
+     },
+     {
+      "action": "delivery",
+      "order": "O008",
+      "city": "C060",
+      "arrival_min": 34144,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 34174
+     },
+     {
+      "action": "pickup",
+      "order": "O034",
+      "city": "C080",
+      "arrival_min": 35410,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 35440
+     },
+     {
+      "action": "delivery",
+      "order": "O028",
+      "city": "C024",
+      "arrival_min": 36398,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 36428
+     },
+     {
+      "action": "delivery",
+      "order": "O034",
+      "city": "C130",
+      "arrival_min": 36707,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 36737
+     }
+    ]
+   },
+   {
+    "truck": "T07",
+    "route": [
+     "C080",
+     "C048",
+     "C130",
+     "C045",
+     "C126",
+     "C049",
+     "C024",
+     "C008",
+     "C010",
+     "C080",
+     "C066",
+     "C118",
+     "C066",
+     "C011",
+     "C062",
+     "C018",
+     "C010",
+     "C045",
+     "C024",
+     "C060",
+     "C048",
+     "C066",
+     "C080",
+     "C024",
+     "C118",
+     "C120",
+     "C024",
+     "C014",
+     "C018",
+     "C011",
+     "C060",
+     "C066",
+     "C022",
+     "C048",
+     "C118",
+     "C048",
+     "C066",
+     "C049",
+     "C045",
+     "C014",
+     "C118",
+     "C060",
+     "C022",
+     "C008",
+     "C060",
+     "C066",
+     "C045",
+     "C008",
+     "C080",
+     "C022",
+     "C049",
+     "C130"
+    ],
+    "total_km": 19836,
+    "loaded_km": 19595,
+    "empty_km": 241,
+    "cost": 38085.12,
+    "co2": 21819.6,
+    "max_load_kg": 24000,
+    "utilization": 0.5712,
+    "finish_min": 40456,
+    "driving_min": 17026,
+    "break_and_rest_min": 21870,
+    "schedule": [
+     {
+      "action": "pickup",
+      "order": "O015",
+      "city": "C048",
+      "arrival_min": 207,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 237
+     },
+     {
+      "action": "pickup",
+      "order": "O035",
+      "city": "C130",
+      "arrival_min": 1413,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 1443
+     },
+     {
+      "action": "delivery",
+      "order": "O035",
+      "city": "C045",
+      "arrival_min": 2630,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 2660
+     },
+     {
+      "action": "pickup",
+      "order": "O025",
+      "city": "C126",
+      "arrival_min": 3977,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 4007
+     },
+     {
+      "action": "pickup",
+      "order": "O043",
+      "city": "C049",
+      "arrival_min": 5315,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 5345
+     },
+     {
+      "action": "pickup",
+      "order": "O007",
+      "city": "C024",
+      "arrival_min": 5686,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 5716
+     },
+     {
+      "action": "pickup",
+      "order": "O022",
+      "city": "C008",
+      "arrival_min": 6459,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 6489
+     },
+     {
+      "action": "delivery",
+      "order": "O043",
+      "city": "C010",
+      "arrival_min": 6526,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 6556
+     },
+     {
+      "action": "pickup",
+      "order": "O029",
+      "city": "C080",
+      "arrival_min": 6919,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 6949
+     },
+     {
+      "action": "pickup",
+      "order": "O042",
+      "city": "C066",
+      "arrival_min": 8176,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 8206
+     },
+     {
+      "action": "delivery",
+      "order": "O022",
+      "city": "C118",
+      "arrival_min": 9487,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 9517
+     },
+     {
+      "action": "pickup",
+      "order": "O050",
+      "city": "C118",
+      "arrival_min": 9517,
+      "wait_min": 0,
+      "late_min": 8962,
+      "departure_min": 9547
+     },
+     {
+      "action": "delivery",
+      "order": "O007",
+      "city": "C066",
+      "arrival_min": 10828,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 10858
+     },
+     {
+      "action": "pickup",
+      "order": "O013",
+      "city": "C011",
+      "arrival_min": 11864,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 11894
+     },
+     {
+      "action": "delivery",
+      "order": "O013",
+      "city": "C062",
+      "arrival_min": 12979,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 13009
+     },
+     {
+      "action": "delivery",
+      "order": "O025",
+      "city": "C018",
+      "arrival_min": 14285,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 14315
+     },
+     {
+      "action": "pickup",
+      "order": "O027",
+      "city": "C010",
+      "arrival_min": 14650,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 14680
+     },
+     {
+      "action": "delivery",
+      "order": "O015",
+      "city": "C045",
+      "arrival_min": 15604,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 15634
+     },
+     {
+      "action": "pickup",
+      "order": "O014",
+      "city": "C024",
+      "arrival_min": 15998,
+      "wait_min": 0,
+      "late_min": 15458,
+      "departure_min": 16028
+     },
+     {
+      "action": "pickup",
+      "order": "O036",
+      "city": "C060",
+      "arrival_min": 16934,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 16964
+     },
+     {
+      "action": "delivery",
+      "order": "O029",
+      "city": "C048",
+      "arrival_min": 18073,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 18103
+     },
+     {
+      "action": "delivery",
+      "order": "O014",
+      "city": "C066",
+      "arrival_min": 18501,
+      "wait_min": 0,
+      "late_min": 17541,
+      "departure_min": 18531
+     },
+     {
+      "action": "delivery",
+      "order": "O050",
+      "city": "C080",
+      "arrival_min": 19758,
+      "wait_min": 0,
+      "late_min": 18003,
+      "departure_min": 19788
+     },
+     {
+      "action": "pickup",
+      "order": "O010",
+      "city": "C024",
+      "arrival_min": 20746,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 20776
+     },
+     {
+      "action": "delivery",
+      "order": "O010",
+      "city": "C118",
+      "arrival_min": 21129,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 21159
+     },
+     {
+      "action": "pickup",
+      "order": "O006",
+      "city": "C120",
+      "arrival_min": 22131,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 22161
+     },
+     {
+      "action": "delivery",
+      "order": "O042",
+      "city": "C024",
+      "arrival_min": 22451,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 22481
+     },
+     {
+      "action": "pickup",
+      "order": "O031",
+      "city": "C014",
+      "arrival_min": 22531,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 22561
+     },
+     {
+      "action": "pickup",
+      "order": "O005",
+      "city": "C018",
+      "arrival_min": 23601,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 23631
+     },
+     {
+      "action": "delivery",
+      "order": "O027",
+      "city": "C011",
+      "arrival_min": 23841,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 23871
+     },
+     {
+      "action": "delivery",
+      "order": "O006",
+      "city": "C060",
+      "arrival_min": 24905,
+      "wait_min": 0,
+      "late_min": 24110,
+      "departure_min": 24935
+     },
+     {
+      "action": "pickup",
+      "order": "O040",
+      "city": "C066",
+      "arrival_min": 25070,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 25100
+     },
+     {
+      "action": "delivery",
+      "order": "O040",
+      "city": "C022",
+      "arrival_min": 26279,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 26309
+     },
+     {
+      "action": "pickup",
+      "order": "O032",
+      "city": "C048",
+      "arrival_min": 27156,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 27186
+     },
+     {
+      "action": "pickup",
+      "order": "O016",
+      "city": "C118",
+      "arrival_min": 27719,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 27749
+     },
+     {
+      "action": "delivery",
+      "order": "O036",
+      "city": "C048",
+      "arrival_min": 28942,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 28972
+     },
+     {
+      "action": "delivery",
+      "order": "O005",
+      "city": "C066",
+      "arrival_min": 29985,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 30015
+     },
+     {
+      "action": "pickup",
+      "order": "O024",
+      "city": "C049",
+      "arrival_min": 31044,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 31074
+     },
+     {
+      "action": "delivery",
+      "order": "O016",
+      "city": "C045",
+      "arrival_min": 31248,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 31278
+     },
+     {
+      "action": "pickup",
+      "order": "O018",
+      "city": "C014",
+      "arrival_min": 32301,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 32331
+     },
+     {
+      "action": "delivery",
+      "order": "O024",
+      "city": "C118",
+      "arrival_min": 32705,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 32735
+     },
+     {
+      "action": "pickup",
+      "order": "O046",
+      "city": "C060",
+      "arrival_min": 33930,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 33960
+     },
+     {
+      "action": "delivery",
+      "order": "O046",
+      "city": "C022",
+      "arrival_min": 35096,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 35126
+     },
+     {
+      "action": "pickup",
+      "order": "O039",
+      "city": "C008",
+      "arrival_min": 35412,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 35442
+     },
+     {
+      "action": "pickup",
+      "order": "O038",
+      "city": "C060",
+      "arrival_min": 36342,
+      "wait_min": 0,
+      "late_min": 35877,
+      "departure_min": 36372
+     },
+     {
+      "action": "delivery",
+      "order": "O039",
+      "city": "C066",
+      "arrival_min": 36552,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 36582
+     },
+     {
+      "action": "delivery",
+      "order": "O038",
+      "city": "C045",
+      "arrival_min": 37464,
+      "wait_min": 0,
+      "late_min": 36444,
+      "departure_min": 37494
+     },
+     {
+      "action": "delivery",
+      "order": "O032",
+      "city": "C008",
+      "arrival_min": 37732,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 37762
+     },
+     {
+      "action": "delivery",
+      "order": "O018",
+      "city": "C080",
+      "arrival_min": 38761,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 38791
+     },
+     {
+      "action": "pickup",
+      "order": "O020",
+      "city": "C022",
+      "arrival_min": 38851,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 38881
+     },
+     {
+      "action": "delivery",
+      "order": "O020",
+      "city": "C049",
+      "arrival_min": 39175,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 39205
+     },
+     {
+      "action": "delivery",
+      "order": "O031",
+      "city": "C130",
+      "arrival_min": 40426,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 40456
+     }
+    ]
+   }
+  ]
+ }
+}

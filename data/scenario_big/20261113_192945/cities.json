@@ -1,0 +1,212 @@
+[
+ {
+  "id": "C004",
+  "name": "Kragujevac",
+  "country": "RS",
+  "latitude": 44.01,
+  "longitude": 20.91
+ },
+ {
+  "id": "C019",
+  "name": "Pozarevac",
+  "country": "RS",
+  "latitude": 44.62,
+  "longitude": 21.19
+ },
+ {
+  "id": "C023",
+  "name": "Sremska Mitrovica",
+  "country": "RS",
+  "latitude": 44.97,
+  "longitude": 19.61
+ },
+ {
+  "id": "C025",
+  "name": "Vrsac",
+  "country": "RS",
+  "latitude": 45.12,
+  "longitude": 21.3
+ },
+ {
+  "id": "C026",
+  "name": "Zagreb",
+  "country": "HR",
+  "latitude": 45.81,
+  "longitude": 15.98
+ },
+ {
+  "id": "C034",
+  "name": "Varazdin",
+  "country": "HR",
+  "latitude": 46.31,
+  "longitude": 16.34
+ },
+ {
+  "id": "C047",
+  "name": "Bijeljina",
+  "country": "BA",
+  "latitude": 44.76,
+  "longitude": 19.21
+ },
+ {
+  "id": "C064",
+  "name": "Durres",
+  "country": "AL",
+  "latitude": 41.32,
+  "longitude": 19.45
+ },
+ {
+  "id": "C095",
+  "name": "Bekescsaba",
+  "country": "HU",
+  "latitude": 46.68,
+  "longitude": 21.09
+ },
+ {
+  "id": "C109",
+  "name": "Sibiu",
+  "country": "RO",
+  "latitude": 45.79,
+  "longitude": 24.15
+ },
+ {
+  "id": "C111",
+  "name": "Targu Mures",
+  "country": "RO",
+  "latitude": 46.54,
+  "longitude": 24.56
+ },
+ {
+  "id": "C155",
+  "name": "Vienna",
+  "country": "AT",
+  "latitude": 48.21,
+  "longitude": 16.37
+ },
+ {
+  "id": "C167",
+  "name": "Leoben",
+  "country": "AT",
+  "latitude": 47.38,
+  "longitude": 15.09
+ },
+ {
+  "id": "C173",
+  "name": "Lausanne",
+  "country": "CH",
+  "latitude": 46.52,
+  "longitude": 6.63
+ },
+ {
+  "id": "C177",
+  "name": "Winterthur",
+  "country": "CH",
+  "latitude": 47.5,
+  "longitude": 8.72
+ },
+ {
+  "id": "C211",
+  "name": "Kassel",
+  "country": "DE",
+  "latitude": 51.31,
+  "longitude": 9.48
+ },
+ {
+  "id": "C225",
+  "name": "Trier",
+  "country": "DE",
+  "latitude": 49.76,
+  "longitude": 6.64
+ },
+ {
+  "id": "C250",
+  "name": "Bielsko-Biala",
+  "country": "PL",
+  "latitude": 49.82,
+  "longitude": 19.04
+ },
+ {
+  "id": "C256",
+  "name": "Ostrava",
+  "country": "CZ",
+  "latitude": 49.82,
+  "longitude": 18.26
+ },
+ {
+  "id": "C300",
+  "name": "Ravenna",
+  "country": "IT",
+  "latitude": 44.42,
+  "longitude": 12.2
+ },
+ {
+  "id": "C340",
+  "name": "Amiens",
+  "country": "FR",
+  "latitude": 49.89,
+  "longitude": 2.3
+ },
+ {
+  "id": "C351",
+  "name": "Poitiers",
+  "country": "FR",
+  "latitude": 46.58,
+  "longitude": 0.34
+ },
+ {
+  "id": "C357",
+  "name": "Barcelona",
+  "country": "ES",
+  "latitude": 41.39,
+  "longitude": 2.17
+ },
+ {
+  "id": "C367",
+  "name": "Vigo",
+  "country": "ES",
+  "latitude": 42.24,
+  "longitude": -8.72
+ },
+ {
+  "id": "C376",
+  "name": "San Sebastian",
+  "country": "ES",
+  "latitude": 43.32,
+  "longitude": -1.98
+ },
+ {
+  "id": "C393",
+  "name": "Coimbra",
+  "country": "PT",
+  "latitude": 40.21,
+  "longitude": -8.43
+ },
+ {
+  "id": "C394",
+  "name": "Faro",
+  "country": "PT",
+  "latitude": 37.02,
+  "longitude": -7.93
+ },
+ {
+  "id": "C404",
+  "name": "Eindhoven",
+  "country": "NL",
+  "latitude": 51.44,
+  "longitude": 5.48
+ },
+ {
+  "id": "C414",
+  "name": "Brussels",
+  "country": "BE",
+  "latitude": 50.85,
+  "longitude": 4.35
+ },
+ {
+  "id": "C428",
+  "name": "Manchester",
+  "country": "GB",
+  "latitude": 53.48,
+  "longitude": -2.24
+ }
+]
