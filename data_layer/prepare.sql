@@ -150,25 +150,6 @@ FROM prep.order_base o
 LEFT JOIN n ON n.scenario_id = o.scenario_id AND n.order_pos = o.order_pos;
 
 -- ---------------------------------------------------------------------------
--- order_similarity : a < b, how "close" two orders are (for clustering / LNS removal)
---   similarity_distance: lower = more related. km part normalised by the scenario's
---   longest leg, time part by one day, +1 if they need different truck types.
--- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE prep.order_similarity AS
-WITH mx AS (SELECT scenario_id, nullif(max(km), 0) AS max_km FROM prep.city_distances GROUP BY ALL)
-SELECT a.scenario_id, a.order_pos AS a_pos, b.order_pos AS b_pos,
-       lp.km AS pickup_km, ld.km AS delivery_km,
-       (lp.km + ld.km) / (2 * mx.max_km)
-       + abs(a.earliest_pickup_minute - b.earliest_pickup_minute) / 1440.0
-       + CASE WHEN coalesce(a.required_truck_type, '') <> coalesce(b.required_truck_type, '') THEN 1 ELSE 0 END
-         AS similarity_distance
-FROM prep.order_base a
-JOIN prep.order_base b ON b.scenario_id = a.scenario_id AND a.order_pos < b.order_pos
-JOIN mx ON mx.scenario_id = a.scenario_id
-JOIN prep.city_distances lp ON lp.scenario_id = a.scenario_id AND lp.from_pos = a.pickup_pos   AND lp.to_pos = b.pickup_pos
-JOIN prep.city_distances ld ON ld.scenario_id = a.scenario_id AND ld.from_pos = a.delivery_pos AND ld.to_pos = b.delivery_pos;
-
--- ---------------------------------------------------------------------------
 -- scenario_summary : one row per scenario, to eyeball difficulty
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE TABLE prep.scenario_summary AS
