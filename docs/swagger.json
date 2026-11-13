@@ -1,0 +1,1077 @@
+{
+ "openapi": "3.0.1",
+ "info": {
+  "title": "Gruber Logistics Hackaton Challenge 2026",
+  "version": "1.0"
+ },
+ "paths": {
+  "/Hackaton2026/Documentation": {
+   "get": {
+    "tags": [
+     "Documentation"
+    ],
+    "responses": {
+     "200": {
+      "description": "Success"
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Scenarios": {
+   "get": {
+    "tags": [
+     "Scenario"
+    ],
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ScenarioSummary"
+         }
+        }
+       },
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ScenarioSummary"
+         }
+        }
+       },
+       "text/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ScenarioSummary"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Scenarios/{scenarioId}/Cities": {
+   "get": {
+    "tags": [
+     "Scenario"
+    ],
+    "parameters": [
+     {
+      "name": "scenarioId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/City"
+         }
+        }
+       },
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/City"
+         }
+        }
+       },
+       "text/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/City"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Scenarios/{scenarioId}/Trucks": {
+   "get": {
+    "tags": [
+     "Scenario"
+    ],
+    "parameters": [
+     {
+      "name": "scenarioId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Truck"
+         }
+        }
+       },
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Truck"
+         }
+        }
+       },
+       "text/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Truck"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Scenarios/{scenarioId}/Orders": {
+   "get": {
+    "tags": [
+     "Scenario"
+    ],
+    "parameters": [
+     {
+      "name": "scenarioId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Order"
+         }
+        }
+       },
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Order"
+         }
+        }
+       },
+       "text/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Order"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Scenarios/{scenarioId}/DistanceMatrix": {
+   "get": {
+    "tags": [
+     "Scenario"
+    ],
+    "parameters": [
+     {
+      "name": "scenarioId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+           "type": "integer",
+           "format": "int32"
+          }
+         }
+        }
+       },
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+           "type": "integer",
+           "format": "int32"
+          }
+         }
+        }
+       },
+       "text/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+           "type": "integer",
+           "format": "int32"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Scenarios/{scenarioId}/DistanceMatrix/csv": {
+   "get": {
+    "tags": [
+     "Scenario"
+    ],
+    "parameters": [
+     {
+      "name": "scenarioId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Success"
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Scenarios/{scenarioId}/SamplePlan": {
+   "get": {
+    "tags": [
+     "Scenario"
+    ],
+    "parameters": [
+     {
+      "name": "scenarioId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "array",
+          "items": {
+           "$ref": "#/components/schemas/PlanStop"
+          }
+         }
+        }
+       },
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "array",
+          "items": {
+           "$ref": "#/components/schemas/PlanStop"
+          }
+         }
+        }
+       },
+       "text/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "array",
+          "items": {
+           "$ref": "#/components/schemas/PlanStop"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Submissions/{scenarioId}/Validate": {
+   "post": {
+    "tags": [
+     "Submission"
+    ],
+    "parameters": [
+     {
+      "name": "scenarioId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanStop"
+         }
+        }
+       }
+      },
+      "text/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanStop"
+         }
+        }
+       }
+      },
+      "application/*+json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanStop"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "$ref": "#/components/schemas/ValidationResult"
+        }
+       },
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ValidationResult"
+        }
+       },
+       "text/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ValidationResult"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Submissions/{scenarioId}/Simulate": {
+   "post": {
+    "tags": [
+     "Submission"
+    ],
+    "parameters": [
+     {
+      "name": "scenarioId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanStop"
+         }
+        }
+       }
+      },
+      "text/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanStop"
+         }
+        }
+       }
+      },
+      "application/*+json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanStop"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "$ref": "#/components/schemas/SimulationMetrics"
+        }
+       },
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SimulationMetrics"
+        }
+       },
+       "text/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SimulationMetrics"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Submissions/{scenarioId}/Score": {
+   "post": {
+    "tags": [
+     "Submission"
+    ],
+    "parameters": [
+     {
+      "name": "scenarioId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanStop"
+         }
+        }
+       }
+      },
+      "text/json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanStop"
+         }
+        }
+       }
+      },
+      "application/*+json": {
+       "schema": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PlanStop"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "$ref": "#/components/schemas/ScoreResult"
+        }
+       },
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ScoreResult"
+        }
+       },
+       "text/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ScoreResult"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/Hackaton2026/Team/Register": {
+   "post": {
+    "tags": [
+     "Team"
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RegisterTeamRequest"
+       }
+      },
+      "text/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RegisterTeamRequest"
+       }
+      },
+      "application/*+json": {
+       "schema": {
+        "$ref": "#/components/schemas/RegisterTeamRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Success",
+      "content": {
+       "text/plain": {
+        "schema": {
+         "$ref": "#/components/schemas/TeamInfo"
+        }
+       },
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TeamInfo"
+        }
+       },
+       "text/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TeamInfo"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "City": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string",
+      "nullable": true
+     },
+     "name": {
+      "type": "string",
+      "nullable": true
+     },
+     "country": {
+      "type": "string",
+      "nullable": true
+     },
+     "latitude": {
+      "type": "number",
+      "format": "double"
+     },
+     "longitude": {
+      "type": "number",
+      "format": "double"
+     }
+    },
+    "additionalProperties": false
+   },
+   "Order": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string",
+      "nullable": true
+     },
+     "pickup_city": {
+      "type": "string",
+      "nullable": true
+     },
+     "delivery_city": {
+      "type": "string",
+      "nullable": true
+     },
+     "weight_kg": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "required_truck_type": {
+      "type": "string",
+      "nullable": true
+     },
+     "pickup_window": {
+      "$ref": "#/components/schemas/TimeWindow"
+     },
+     "delivery_window": {
+      "$ref": "#/components/schemas/TimeWindow"
+     },
+     "value": {
+      "type": "number",
+      "format": "double",
+      "readOnly": true
+     }
+    },
+    "additionalProperties": false
+   },
+   "PlanStop": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "type": "string",
+      "nullable": true
+     },
+     "order": {
+      "type": "string",
+      "nullable": true
+     }
+    },
+    "additionalProperties": false
+   },
+   "RegisterTeamRequest": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string",
+      "nullable": true
+     }
+    },
+    "additionalProperties": false
+   },
+   "ScenarioSummary": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string",
+      "nullable": true
+     },
+     "name": {
+      "type": "string",
+      "nullable": true
+     },
+     "cities_count": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "trucks_count": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "orders_count": {
+      "type": "integer",
+      "format": "int32"
+     }
+    },
+    "additionalProperties": false
+   },
+   "ScheduleEntry": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "type": "string",
+      "nullable": true
+     },
+     "order": {
+      "type": "string",
+      "nullable": true
+     },
+     "city": {
+      "type": "string",
+      "nullable": true
+     },
+     "arrival_min": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "wait_min": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "late_min": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "departure_min": {
+      "type": "integer",
+      "format": "int32"
+     }
+    },
+    "additionalProperties": false
+   },
+   "ScoreBreakdown": {
+    "type": "object",
+    "properties": {
+     "fulfillment": {
+      "type": "number",
+      "format": "double"
+     },
+     "cost_efficiency": {
+      "type": "number",
+      "format": "double"
+     },
+     "loaded_ratio": {
+      "type": "number",
+      "format": "double"
+     },
+     "co2_efficiency": {
+      "type": "number",
+      "format": "double"
+     },
+     "penalty": {
+      "type": "number",
+      "format": "double"
+     },
+     "late_penalty": {
+      "type": "number",
+      "format": "double"
+     }
+    },
+    "additionalProperties": false
+   },
+   "ScoreResult": {
+    "type": "object",
+    "properties": {
+     "scenario": {
+      "type": "string",
+      "nullable": true
+     },
+     "score": {
+      "type": "number",
+      "format": "double"
+     },
+     "breakdown": {
+      "$ref": "#/components/schemas/ScoreBreakdown"
+     },
+     "metrics": {
+      "$ref": "#/components/schemas/SimulationMetrics"
+     },
+     "validation": {
+      "$ref": "#/components/schemas/ValidationResult"
+     }
+    },
+    "additionalProperties": false
+   },
+   "SimulationMetrics": {
+    "type": "object",
+    "properties": {
+     "total_km": {
+      "type": "number",
+      "format": "double"
+     },
+     "loaded_km": {
+      "type": "number",
+      "format": "double"
+     },
+     "empty_km": {
+      "type": "number",
+      "format": "double"
+     },
+     "total_cost": {
+      "type": "number",
+      "format": "double"
+     },
+     "total_co2": {
+      "type": "number",
+      "format": "double"
+     },
+     "orders_fulfilled": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "orders_total": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "value_fulfilled": {
+      "type": "number",
+      "format": "double"
+     },
+     "value_lost_to_lateness": {
+      "type": "number",
+      "format": "double"
+     },
+     "value_total": {
+      "type": "number",
+      "format": "double"
+     },
+     "truck_utilization": {
+      "type": "number",
+      "format": "double"
+     },
+     "orders_late": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "orders_too_late": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "total_late_min": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "penalized_late_min": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "trucks": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/TruckMetrics"
+      },
+      "nullable": true
+     }
+    },
+    "additionalProperties": false
+   },
+   "TeamInfo": {
+    "type": "object",
+    "properties": {
+     "team": {
+      "type": "string",
+      "nullable": true
+     },
+     "display_name": {
+      "type": "string",
+      "nullable": true
+     },
+     "competitive_max_attempts": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "competitive_max_simulations": {
+      "type": "integer",
+      "format": "int32"
+     }
+    },
+    "additionalProperties": false
+   },
+   "TimeWindow": {
+    "type": "object",
+    "properties": {
+     "from": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "to": {
+      "type": "integer",
+      "format": "int32"
+     }
+    },
+    "additionalProperties": false
+   },
+   "Truck": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string",
+      "nullable": true
+     },
+     "start_city": {
+      "type": "string",
+      "nullable": true
+     },
+     "capacity_kg": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "type": {
+      "type": "string",
+      "nullable": true
+     },
+     "cost_per_km": {
+      "type": "number",
+      "format": "double"
+     },
+     "co2_per_km": {
+      "type": "number",
+      "format": "double"
+     }
+    },
+    "additionalProperties": false
+   },
+   "TruckMetrics": {
+    "type": "object",
+    "properties": {
+     "truck": {
+      "type": "string",
+      "nullable": true
+     },
+     "route": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "nullable": true
+     },
+     "total_km": {
+      "type": "number",
+      "format": "double"
+     },
+     "loaded_km": {
+      "type": "number",
+      "format": "double"
+     },
+     "empty_km": {
+      "type": "number",
+      "format": "double"
+     },
+     "cost": {
+      "type": "number",
+      "format": "double"
+     },
+     "co2": {
+      "type": "number",
+      "format": "double"
+     },
+     "max_load_kg": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "utilization": {
+      "type": "number",
+      "format": "double"
+     },
+     "finish_min": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "driving_min": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "break_and_rest_min": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "schedule": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ScheduleEntry"
+      },
+      "nullable": true
+     }
+    },
+    "additionalProperties": false
+   },
+   "ValidationResult": {
+    "type": "object",
+    "properties": {
+     "is_valid": {
+      "type": "boolean",
+      "readOnly": true
+     },
+     "violations": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ValidationViolation"
+      },
+      "nullable": true
+     }
+    },
+    "additionalProperties": false
+   },
+   "ValidationViolation": {
+    "type": "object",
+    "properties": {
+     "rule": {
+      "type": "string",
+      "nullable": true
+     },
+     "truck": {
+      "type": "string",
+      "nullable": true
+     },
+     "order": {
+      "type": "string",
+      "nullable": true
+     },
+     "message": {
+      "type": "string",
+      "nullable": true
+     }
+    },
+    "additionalProperties": false
+   }
+  },
+  "securitySchemes": {
+   "ApiKey": {
+    "type": "apiKey",
+    "description": "Team API key",
+    "name": "X-Api-Key",
+    "in": "header"
+   }
+  }
+ },
+ "security": [
+  {
+   "ApiKey": []
+  }
+ ]
+}

@@ -1,0 +1,54 @@
+{
+ "T01": [
+  {
+   "action": "pickup",
+   "order": "O001"
+  },
+  {
+   "action": "delivery",
+   "order": "O001"
+  },
+  {
+   "action": "pickup",
+   "order": "O002"
+  },
+  {
+   "action": "delivery",
+   "order": "O002"
+  },
+  {
+   "action": "pickup",
+   "order": "O003"
+  },
+  {
+   "action": "delivery",
+   "order": "O003"
+  }
+ ],
+ "T02": [
+  {
+   "action": "pickup",
+   "order": "O005"
+  },
+  {
+   "action": "delivery",
+   "order": "O005"
+  },
+  {
+   "action": "pickup",
+   "order": "O006"
+  },
+  {
+   "action": "delivery",
+   "order": "O006"
+  },
+  {
+   "action": "pickup",
+   "order": "O007"
+  },
+  {
+   "action": "delivery",
+   "order": "O007"
+  }
+ ]
+}

@@ -1,0 +1,507 @@
+# Gruber Logistics Hackaton Challenge 2026 — Logistics Grand Prix
+
+## 1. The challenge
+
+You are the dispatcher of a European trucking company.
+
+You get a scenario: a set of **cities**, a fleet of **trucks** and a list of transport **orders**. Your job is to build a **plan** that tells every truck which orders to pick up and deliver, and in which order.
+
+A good plan:
+
+- delivers as many orders as possible,
+- keeps cost low,
+- avoids driving empty,
+- emits as little CO₂ as possible,
+- breaks no rules.
+
+The API simulates your plan and returns a **score** (max **1000**). The highest score wins.
+
+You can use any language, any algorithm (greedy, heuristics, metaheuristics, MIP solvers, ML…) and any tooling. Only the submitted plan counts.
+
+---
+
+## 2. How it works
+
+1. Pick a scenario: `GET /Hackaton2026/Scenarios`.
+2. Download its data: cities, trucks, orders and the distance matrix.
+3. Build a plan with your algorithm.
+4. Check the plan: `POST /Hackaton2026/Submissions/{scenarioId}/Validate`.
+5. Inspect the metrics: `POST /Hackaton2026/Submissions/{scenarioId}/Simulate`.
+6. Get the score: `POST /Hackaton2026/Submissions/{scenarioId}/Score`.
+7. Improve and repeat.
+
+Scenario data is generated with random cities, trucks and orders **when the application starts**. While the application runs, every team gets exactly the same data; after a restart all scenarios are regenerated (new cities), so always fetch fresh data before planning.
+
+Swagger UI is available at `/swagger`.
+
+---
+
+## 3. Available scenarios
+
+| Id | Name | Cities | Trucks | Orders | City selection | Orders with time window |
+|---|---|---|---|---|---|---|
+| `scenario_small` | Small | 10 | 4 | 20 | one region | 0% |
+| `scenario_middle` | Middle | 20 | 8 | 50 | one region | ~10% |
+| `scenario_big` | Big | 30 | 15 | 120 | whole Europe | ~20% |
+| `scenario_competitive` | Competitive | 45 | 25 | 200 | whole Europe | ~30% |
+
+The organizers may publish additional (final) scenarios during the event.
+
+---
+
+## 4. Domain model
+
+### 4.1 City
+
+All cities are real European cities. City IDs are global and stable, so `C001` is always the same city in every scenario.
+
+```json
+{
+  "id": "C001",
+  "name": "Belgrade",
+  "country": "RS",
+  "latitude": 44.79,
+  "longitude": 20.45
+}
+```
+
+### 4.2 Truck
+
+```json
+{
+  "id": "T01",
+  "start_city": "C001",
+  "capacity_kg": 12000,
+  "type": "standard",
+  "cost_per_km": 1.2,
+  "co2_per_km": 0.85
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `start_city` | Where the truck is when the plan starts |
+| `capacity_kg` | Maximum load the truck can carry at any moment |
+| `type` | `standard`, `refrigerated` or `hazmat` |
+| `cost_per_km` | Cost (€) for every km driven, loaded or empty |
+| `co2_per_km` | CO₂ (kg) for every km driven, loaded or empty |
+
+### 4.3 Order
+
+```json
+{
+  "id": "O001",
+  "pickup_city": "C012",
+  "delivery_city": "C045",
+  "weight_kg": 3200,
+  "required_truck_type": null
+}
+```
+
+If `required_truck_type` is not `null`, only a truck of that type may carry the order.
+
+### 4.4 Distance matrix
+
+The matrix is symmetric, in kilometres, with `0` on the diagonal. It contains only the cities of the scenario.
+
+The distances are approximate road distances: the great-circle distance between the two cities × 1.3.
+
+It is available in two formats.
+
+**JSON** — `GET /Hackaton2026/Scenarios/{id}/DistanceMatrix`
+
+```json
+{
+  "C001": { "C001": 0,   "C002": 107, "C003": 287 },
+  "C002": { "C001": 107, "C002": 0,   "C003": 335 },
+  "C003": { "C001": 287, "C002": 335, "C003": 0   }
+}
+```
+
+**CSV** — `GET /Hackaton2026/Scenarios/{id}/DistanceMatrix/csv`
+
+```
+city_id,C001,C002,C003
+C001,0,107,287
+C002,107,0,335
+C003,287,335,0
+```
+
+---
+
+## 5. API reference
+
+Base path: `/Hackaton2026`
+
+### 5.1 Scenario data
+
+| Method | Route | Returns |
+|---|---|---|
+| GET | `/Scenarios` | List of scenarios with counts |
+| GET | `/Scenarios/{id}/Cities` | `City[]` |
+| GET | `/Scenarios/{id}/Trucks` | `Truck[]` |
+| GET | `/Scenarios/{id}/Orders` | `Order[]` |
+| GET | `/Scenarios/{id}/DistanceMatrix` | Distance matrix (JSON) |
+| GET | `/Scenarios/{id}/DistanceMatrix/csv` | Distance matrix (CSV file) |
+| GET | `/Scenarios/{id}/SamplePlan` | Small example plan (2 trucks, up to 3 orders each) showing the format |
+
+**Authentication:** all `/Submissions/...` endpoints require the header `X-Api-Key: <your team key>`. Every Validate, Simulate and Score call is recorded for your team. Scenario endpoints are public.
+
+### 5.1 Authentication
+
+- Each team receives one **10-character API key** from the organizers (e.g. `XXXXXXXXXX`). Keep it private.
+- Send it in every Validate / Simulate / Score request: `X-Api-Key: <your team key>`.
+- In Swagger click **Authorize**, paste the key and confirm.
+- **Register your team name** (shown on the leaderboard): `POST /Hackaton2026/Team/Register` with body `{ "name": "Route Runners" }`. 3-40 characters, must be unique (`409` if taken). You can change it any time. `GET /Hackaton2026/Team` shows your team info and limits.
+- Responses: missing header → `401 Missing 'X-Api-Key' header.`, unknown or deactivated key → `401 Invalid API key.`
+- Every call is stored (team, scenario, type, time, plan, score). The organizers rank teams by their **best Score** per scenario.
+- **`scenario_competitive`: limited Score and Simulate calls per team (default 3 each).** When a limit is reached, the call returns `429`. Validate is unlimited. Use the other scenarios and your own local simulation to tune your algorithm.
+
+Admin-only endpoints (organizers):
+
+| Method | Route | Description |
+|---|---|---|
+| GET | `/Admin/Attempts?team=&scenario=&type=&limit=` | All recorded attempts, newest first |
+| GET | `/Admin/Leaderboard/{id}` | Best score per team for a scenario |
+
+A non-admin key on these routes returns `403`.
+
+An unknown scenario returns `404 Not Found`.
+
+### 5.2 Submissions
+
+All submission endpoints take the **same request body** (a plan, see section 6).
+
+| Method | Route | Returns |
+|---|---|---|
+| POST | `/Submissions/{id}/Validate` | Rule violations only |
+| POST | `/Submissions/{id}/Simulate` | Raw metrics only |
+| POST | `/Submissions/{id}/Score` | Score, breakdown, metrics and validation |
+
+---
+
+## 6. Plan (submission) format
+
+A plan is a JSON object:
+
+- **key** = truck ID,
+- **value** = ordered list of stops.
+
+```json
+{
+  "T01": [
+	{ "action": "pickup",   "order": "O003" },
+	{ "action": "pickup",   "order": "O011" },
+	{ "action": "delivery", "order": "O003" },
+	{ "action": "delivery", "order": "O011" }
+  ],
+  "T02": [
+	{ "action": "pickup",   "order": "O007" },
+	{ "action": "delivery", "order": "O007" }
+  ],
+  "T03": []
+}
+```
+
+**Rules of interpretation**
+
+- `action` is `"pickup"` or `"delivery"`.
+- The truck starts at its `start_city` and drives to the city of each stop, in list order:
+  - `pickup` → the order's `pickup_city`
+  - `delivery` → the order's `delivery_city`
+- Consecutive stops in the same city cost 0 km.
+- Trucks **do not** return to their start city at the end.
+- A truck may carry several orders at once (consolidation), as long as capacity is never exceeded.
+- Unused trucks can be omitted or given an empty list.
+- Orders that are not in the plan are simply not fulfilled. There is no extra penalty, but you lose fulfillment points.
+
+---
+
+## 7. Validation rules
+
+Every violation costs **20 points**.
+
+| Rule code | Description |
+|---|---|
+| `unknown_truck` | Truck ID does not exist in the scenario |
+| `unknown_order` | Order ID does not exist in the scenario |
+| `unknown_action` | `action` is not `pickup` / `delivery` |
+| `order_assigned_multiple_times` | Same order appears on more than one truck |
+| `duplicate_pickup` | Order picked up twice |
+| `duplicate_delivery` | Order delivered twice |
+| `delivery_before_pickup` | Delivery stop appears before its pickup |
+| `pickup_without_delivery` | Order picked up but never delivered |
+| `capacity_exceeded` | A pickup would push the load above `capacity_kg`. The pickup is **rejected** |
+| `truck_type_mismatch` | Order requires a truck type that the assigned truck does not have |
+
+**How invalid stops are simulated**
+
+- Stops that cannot be executed (unknown order or action, delivery before pickup, duplicates, an order already taken by another truck) are **skipped**.
+- Orders delivered by a truck of the wrong type are **not counted** as fulfilled.
+- A pickup that would exceed the truck's capacity is **rejected**: the order is not loaded, its later delivery stop is ignored, and the order is **not fulfilled**. The `capacity_exceeded` penalty is still applied.
+
+---
+
+## 8. Metrics
+
+| Metric | Description |
+|---|---|
+| `total_km` | Total km driven by all trucks |
+| `loaded_km` | Km driven with at least one order on board |
+| `empty_km` | Km driven with nothing on board |
+| `total_cost` | Σ (km × `cost_per_km`) per truck |
+| `total_co2` | Σ (km × `co2_per_km`) per truck |
+| `orders_fulfilled` | Orders correctly picked up and delivered |
+| `orders_total` | Number of orders in the scenario |
+| `truck_utilization` | Average load / capacity, weighted by km driven |
+
+Per-truck metrics are also returned: route (list of city IDs), km, cost, CO₂, max load and utilization.
+
+### 8.1 Time simulation and time windows
+
+Time is **calculated**, not waited for in real time. Minute `0` = plan start (Day 1, 06:00); all trucks start at minute 0.
+
+| Rule | Value |
+|---|---|
+| Average speed | 70 km/h (`driving_min = ceil(km * 60 / 70)`) |
+| Service time per stop (pickup or delivery) | 30 min |
+| Break | 45 min after 4.5 h of driving (inserted automatically) |
+| Daily rest | 11 h after 9 h of driving (inserted automatically) |
+| Waiting / service ≥ 45 min | counts as a break |
+
+none in `scenario_small`, ~10% in `scenario_middle`, ~20% in `scenario_big`, ~30% in `scenario_competitive`
+
+- **Early** arrival → the truck waits until `from`.
+- **Late** arrival (up to 60 min after `to`) → order still fulfilled, but it keeps only part of its value: linearly from 100% (on time) down to **50% at 60 min late** (e.g. 30 min late = 75%). `late_penalty` in the score breakdown shows the points lost this way.
+- More than 60 min late → order is **not fulfilled**.
+- Every time window is generated so that the order is reachable on time when the nearest compatible truck serves it alone (driving time, breaks and service included). Combining it with other orders is your challenge.
+
+The plan format does not change. Every truck in the simulation response contains `finish_min`, `driving_min`, `break_and_rest_min` and a `schedule` (arrival, wait, late and departure minute per stop). Global metrics include `orders_late`, `orders_too_late`, `total_late_min` and `penalized_late_min`.
+
+---
+
+## 9. Scoring
+
+Each component is normalized to the range **0–100**:
+
+| Component | Formula | Weight |
+|---|---|---|
+| Fulfillment | `100 × value_fulfilled / value_total` | **50%** |
+| Cost efficiency | `100 × min(1, reference_cost / total_cost)` | **20%** |
+| Loaded ratio | `100 × loaded_km / total_km` | **15%** |
+| CO₂ efficiency | `100 × min(1, reference_co2 / total_co2)` | **15%** |
+
+The reference values are calculated from the orders you fulfilled:
+
+- `reference_km` = sum of the direct `pickup_city → delivery_city` distances of **all** orders × (`orders_fulfilled` / `orders_total`)
+- `reference_cost` = `reference_km` × cheapest `cost_per_km` in the fleet
+- `reference_co2` = `reference_km` × lowest `co2_per_km` in the fleet
+
+The final score is:
+
+```
+score = 10 × (0.50·fulfillment + 0.20·cost_eff + 0.15·loaded_ratio + 0.15·co2_eff)
+		− 20 × number_of_violations
+```
+
+Maximum score is **1000**. The score can be negative.
+
+### 9.1 Order value
+
+Orders are not worth the same. Every order has a `value` (returned in the order list):
+
+| Order | Value |
+|---|---|
+| Normal | 1.0 |
+| Refrigerated | 1.5 |
+| Hazmat | 1.5 |
+| Has a pickup or delivery time window | +0.5 |
+
+Example: a hazmat order with a time window is worth 2.0 normal orders.
+
+**Tips**
+
+- Fulfillment is worth half the score, so first make sure every order is delivered.
+- Consolidating orders (several pickups before deliveries) reduces km and empty km.
+- Choose trucks that are cheap and clean for long routes.
+- Avoid long empty repositioning drives.
+- Always run `/Validate` first. One violation costs 20 points (2% of the maximum score).
+
+---
+
+## 10. Examples
+
+### 10.1 Get the data (curl)
+
+```bash
+BASE=https://<host>/Hackaton2026
+API_KEY=<your team key>
+
+curl $BASE/Scenarios
+curl $BASE/Scenarios/scenario_small/Cities
+curl $BASE/Scenarios/scenario_small/Trucks
+curl $BASE/Scenarios/scenario_small/Orders
+curl $BASE/Scenarios/scenario_small/DistanceMatrix
+curl -o distance_matrix.csv $BASE/Scenarios/scenario_small/DistanceMatrix/csv
+```
+
+### 10.2 Submit a plan (curl)
+
+```bash
+curl -X POST "$BASE/Submissions/scenario_small/Score" \
+	 -H "X-Api-Key: $API_KEY" \
+	 -H "Content-Type: application/json" \
+	 -d @plan.json
+```
+
+### 10.3 Score response
+
+```json
+{
+  "scenario": "scenario_small",
+  "score": 742.35,
+  "breakdown": {
+	"fulfillment": 85.0,
+	"cost_efficiency": 61.2,
+	"loaded_ratio": 72.4,
+	"co2_efficiency": 58.9,
+	"penalty": 0
+  },
+  "metrics": {
+	"total_km": 4820,
+	"loaded_km": 3490,
+	"empty_km": 1330,
+	"total_cost": 6120.5,
+	"total_co2": 4210.8,
+	"orders_fulfilled": 17,
+	"orders_total": 20,
+	"truck_utilization": 0.4123,
+	"trucks": [
+	  {
+		"truck": "T01",
+		"route": ["C045", "C012", "C030", "C078"],
+		"total_km": 1250,
+		"loaded_km": 980,
+		"empty_km": 270,
+		"cost": 1500.0,
+		"co2": 1050.0,
+		"max_load_kg": 11300,
+		"utilization": 0.52
+	  }
+	]
+  },
+  "validation": {
+	"is_valid": true,
+	"violations": []
+  }
+}
+```
+
+### 10.4 Validation response with errors
+
+```json
+{
+  "is_valid": false,
+  "violations": [
+	{
+	  "rule": "capacity_exceeded",
+	  "truck": "T01",
+	  "order": "O011",
+	  "message": "Load 13500 kg exceeds capacity 12000 kg after picking up 'O011'."
+	},
+	{
+	  "rule": "delivery_before_pickup",
+	  "truck": "T02",
+	  "order": "O004",
+	  "message": "Order 'O004' delivered before pickup."
+	}
+  ]
+}
+```
+
+### 10.5 Python starter
+
+```python
+import requests
+
+BASE = "https://<host>/Hackaton2026"
+SCENARIO = "scenario_small"
+HEADERS = {"X-Api-Key": "<your team key>"}
+
+trucks = requests.get(f"{BASE}/Scenarios/{SCENARIO}/Trucks").json()
+orders = requests.get(f"{BASE}/Scenarios/{SCENARIO}/Orders").json()
+dist   = requests.get(f"{BASE}/Scenarios/{SCENARIO}/DistanceMatrix").json()
+
+# naive plan: assign orders round-robin to compatible trucks, one at a time
+plan = {t["id"]: [] for t in trucks}
+for i, o in enumerate(orders):
+	candidates = [t for t in trucks
+				  if t["capacity_kg"] >= o["weight_kg"]
+				  and (o["required_truck_type"] is None or t["type"] == o["required_truck_type"])]
+	if not candidates:
+		continue
+	truck = candidates[i % len(candidates)]
+	plan[truck["id"]] += [
+		{"action": "pickup",   "order": o["id"]},
+		{"action": "delivery", "order": o["id"]},
+	]
+
+/Validate", json=plan, headers=HEADERS).json()
+print("valid:", validation["is_valid"], validation["violations"][:5])
+
+/Score", json=plan, headers=HEADERS).json()
+print("score:", result["score"], result["breakdown"])
+```
+
+### 10.6 C# starter
+
+```csharp
+using System.Net.Http.Json;
+
+var http = new HttpClient { BaseAddress = new Uri("https://<host>/Hackaton2026/") };
+http.DefaultRequestHeaders.Add("X-Api-Key", "<your team key>");
+const string scenario = "scenario_small";
+
+var trucks = await http.GetFromJsonAsync<List<Truck>>($"Scenarios/{scenario}/Trucks");
+var orders = await http.GetFromJsonAsync<List<Order>>($"Scenarios/{scenario}/Orders");
+
+var plan = trucks!.ToDictionary(t => t.id, _ => new List<Stop>());
+// ... your algorithm fills the plan ...
+
+var response = await http.PostAsJsonAsync($"Submissions/{scenario}/Score", plan);
+Console.WriteLine(await response.Content.ReadAsStringAsync());
+
+record Truck(string id, string start_city, int capacity_kg, string type, double cost_per_km, double co2_per_km);
+record Order(string id, string pickup_city, string delivery_city, int weight_kg, string? required_truck_type);
+record Stop(string action, string order);
+```
+
+---
+
+## 11. Sample plan
+
+`GET /Hackaton2026/Scenarios/{id}/SamplePlan` returns a **small example plan**: the first 2 trucks, each with up to 3 compatible orders (pickup immediately followed by delivery).
+
+It only shows the expected format and is a valid submission. Most orders are intentionally left unassigned, so its score is low. Building a complete plan is your job.
+
+---
+
+## 12. FAQ
+
+**Do trucks have time windows or driving-hour limits?**
+Yes. Some orders have time windows and drivers take automatic breaks and daily rests. See section 8.1.
+
+**Can a truck visit the same city multiple times?**
+Yes.
+
+**Can I split an order between trucks?**
+No. An order is carried as a whole by one truck.
+
+**Do I have to use all trucks?**
+No. Unused trucks cost nothing.
+
+**Is the data going to change?**
+Scenarios are regenerated with new random data when the server restarts. While it runs, data is fixed and the same for all teams. Always load fresh data before planning.
+
+**What happens if I lose my API key?**
+Ask the organizers. Do not share your key with other teams: all attempts are recorded under your team.

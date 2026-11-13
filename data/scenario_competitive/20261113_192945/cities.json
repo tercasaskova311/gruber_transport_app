@@ -1,0 +1,317 @@
+[
+ {
+  "id": "C003",
+  "name": "Nis",
+  "country": "RS",
+  "latitude": 43.32,
+  "longitude": 21.9
+ },
+ {
+  "id": "C005",
+  "name": "Subotica",
+  "country": "RS",
+  "latitude": 46.1,
+  "longitude": 19.67
+ },
+ {
+  "id": "C036",
+  "name": "Dubrovnik",
+  "country": "HR",
+  "latitude": 42.65,
+  "longitude": 18.09
+ },
+ {
+  "id": "C040",
+  "name": "Koprivnica",
+  "country": "HR",
+  "latitude": 46.16,
+  "longitude": 16.83
+ },
+ {
+  "id": "C045",
+  "name": "Mostar",
+  "country": "BA",
+  "latitude": 43.34,
+  "longitude": 17.81
+ },
+ {
+  "id": "C048",
+  "name": "Brcko",
+  "country": "BA",
+  "latitude": 44.87,
+  "longitude": 18.81
+ },
+ {
+  "id": "C049",
+  "name": "Doboj",
+  "country": "BA",
+  "latitude": 44.73,
+  "longitude": 18.09
+ },
+ {
+  "id": "C062",
+  "name": "Stip",
+  "country": "MK",
+  "latitude": 41.74,
+  "longitude": 22.2
+ },
+ {
+  "id": "C075",
+  "name": "Novo Mesto",
+  "country": "SI",
+  "latitude": 45.8,
+  "longitude": 15.17
+ },
+ {
+  "id": "C084",
+  "name": "Nyiregyhaza",
+  "country": "HU",
+  "latitude": 47.96,
+  "longitude": 21.72
+ },
+ {
+  "id": "C085",
+  "name": "Kecskemet",
+  "country": "HU",
+  "latitude": 46.91,
+  "longitude": 19.69
+ },
+ {
+  "id": "C089",
+  "name": "Tatabanya",
+  "country": "HU",
+  "latitude": 47.58,
+  "longitude": 18.39
+ },
+ {
+  "id": "C144",
+  "name": "Alexandroupoli",
+  "country": "GR",
+  "latitude": 40.85,
+  "longitude": 25.87
+ },
+ {
+  "id": "C164",
+  "name": "Dornbirn",
+  "country": "AT",
+  "latitude": 47.41,
+  "longitude": 9.74
+ },
+ {
+  "id": "C170",
+  "name": "Geneva",
+  "country": "CH",
+  "latitude": 46.2,
+  "longitude": 6.14
+ },
+ {
+  "id": "C172",
+  "name": "Bern",
+  "country": "CH",
+  "latitude": 46.95,
+  "longitude": 7.45
+ },
+ {
+  "id": "C175",
+  "name": "St. Gallen",
+  "country": "CH",
+  "latitude": 47.42,
+  "longitude": 9.38
+ },
+ {
+  "id": "C181",
+  "name": "Munich",
+  "country": "DE",
+  "latitude": 48.14,
+  "longitude": 11.58
+ },
+ {
+  "id": "C182",
+  "name": "Cologne",
+  "country": "DE",
+  "latitude": 50.94,
+  "longitude": 6.96
+ },
+ {
+  "id": "C184",
+  "name": "Stuttgart",
+  "country": "DE",
+  "latitude": 48.78,
+  "longitude": 9.18
+ },
+ {
+  "id": "C193",
+  "name": "Duisburg",
+  "country": "DE",
+  "latitude": 51.43,
+  "longitude": 6.76
+ },
+ {
+  "id": "C205",
+  "name": "Magdeburg",
+  "country": "DE",
+  "latitude": 52.12,
+  "longitude": 11.63
+ },
+ {
+  "id": "C208",
+  "name": "Erfurt",
+  "country": "DE",
+  "latitude": 50.98,
+  "longitude": 11.03
+ },
+ {
+  "id": "C218",
+  "name": "Osnabruck",
+  "country": "DE",
+  "latitude": 52.28,
+  "longitude": 8.05
+ },
+ {
+  "id": "C246",
+  "name": "Olsztyn",
+  "country": "PL",
+  "latitude": 53.78,
+  "longitude": 20.49
+ },
+ {
+  "id": "C254",
+  "name": "Prague",
+  "country": "CZ",
+  "latitude": 50.08,
+  "longitude": 14.44
+ },
+ {
+  "id": "C263",
+  "name": "Pardubice",
+  "country": "CZ",
+  "latitude": 50.04,
+  "longitude": 15.78
+ },
+ {
+  "id": "C269",
+  "name": "Presov",
+  "country": "SK",
+  "latitude": 49,
+  "longitude": 21.24
+ },
+ {
+  "id": "C285",
+  "name": "Bari",
+  "country": "IT",
+  "latitude": 41.12,
+  "longitude": 16.87
+ },
+ {
+  "id": "C288",
+  "name": "Verona",
+  "country": "IT",
+  "latitude": 45.44,
+  "longitude": 10.99
+ },
+ {
+  "id": "C290",
+  "name": "Padua",
+  "country": "IT",
+  "latitude": 45.41,
+  "longitude": 11.88
+ },
+ {
+  "id": "C306",
+  "name": "Pescara",
+  "country": "IT",
+  "latitude": 42.46,
+  "longitude": 14.21
+ },
+ {
+  "id": "C330",
+  "name": "Toulon",
+  "country": "FR",
+  "latitude": 43.12,
+  "longitude": 5.93
+ },
+ {
+  "id": "C331",
+  "name": "Grenoble",
+  "country": "FR",
+  "latitude": 45.19,
+  "longitude": 5.72
+ },
+ {
+  "id": "C332",
+  "name": "Dijon",
+  "country": "FR",
+  "latitude": 47.32,
+  "longitude": 5.04
+ },
+ {
+  "id": "C342",
+  "name": "Metz",
+  "country": "FR",
+  "latitude": 49.12,
+  "longitude": 6.18
+ },
+ {
+  "id": "C354",
+  "name": "Pau",
+  "country": "FR",
+  "latitude": 43.3,
+  "longitude": -0.37
+ },
+ {
+  "id": "C366",
+  "name": "Valladolid",
+  "country": "ES",
+  "latitude": 41.65,
+  "longitude": -4.72
+ },
+ {
+  "id": "C372",
+  "name": "Elche",
+  "country": "ES",
+  "latitude": 38.27,
+  "longitude": -0.7
+ },
+ {
+  "id": "C384",
+  "name": "Badajoz",
+  "country": "ES",
+  "latitude": 38.88,
+  "longitude": -6.97
+ },
+ {
+  "id": "C389",
+  "name": "Toledo",
+  "country": "ES",
+  "latitude": 39.86,
+  "longitude": -4.02
+ },
+ {
+  "id": "C425",
+  "name": "Esch-sur-Alzette",
+  "country": "LU",
+  "latitude": 49.5,
+  "longitude": 5.98
+ },
+ {
+  "id": "C450",
+  "name": "Copenhagen",
+  "country": "DK",
+  "latitude": 55.68,
+  "longitude": 12.57
+ },
+ {
+  "id": "C479",
+  "name": "Vilnius",
+  "country": "LT",
+  "latitude": 54.69,
+  "longitude": 25.28
+ },
+ {
+  "id": "C494",
+  "name": "Grodno",
+  "country": "BY",
+  "latitude": 53.68,
+  "longitude": 23.83
+ }
+]
