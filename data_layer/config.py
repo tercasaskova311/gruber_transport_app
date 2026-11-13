@@ -25,6 +25,6 @@ DATA_DIR = Path(os.environ.get("DATA_DIR", HERE / "data"))
 DB_PATH = Path(os.environ.get("DB_PATH", DATA_DIR / "hackathon.duckdb"))
 
 # --- Problem rules (keep in sync with prepare.sql macros) -------------------
-SPEED_KMH = 70            # drive_min = ceil(km * 60 / 70)
+SPEED_KMH = 70            # drive_minutes = ceil(km * 60 / 70)
 SERVICE_MIN = 30          # per stop (pickup or delivery)
 DAY1_START_HOUR = 6       # minute 0 = Day 1 06:00

@@ -7,7 +7,7 @@
     sc.compat[o, t]                          # True if truck t may carry order o
     load.save_run(con_rw, sc, algo="greedy", plan=..., stops=[...], local_score=123.4)
 
-Everything is indexed 0..N-1 exactly like prepare.sql (city_idx, truck idx, order_idx).
+Everything is indexed 0..N-1 exactly like prepare.sql (city_pos, truck_pos, order_pos).
 Missing time-window bounds are 0 (from) and INF (to), so no NULL handling in the solver.
 """
 import json
@@ -41,13 +41,13 @@ class Scenario:
     snapshot_id: str
     # cities
     city_ids: list
-    city_index: dict              # city_id -> idx
+    city_index: dict              # city_id -> position
     D_km: np.ndarray              # (N, N) float
     D_min: np.ndarray             # (N, N) int, drive minutes
     # trucks
     truck_ids: list
     truck_index: dict
-    truck_start: np.ndarray       # city idx
+    truck_start: np.ndarray       # city position
     truck_cap: np.ndarray
     truck_type: np.ndarray        # str
     truck_cost_km: np.ndarray
@@ -55,14 +55,14 @@ class Scenario:
     # orders
     order_ids: list
     order_index: dict
-    order_pickup: np.ndarray      # city idx
-    order_delivery: np.ndarray    # city idx
+    order_pickup: np.ndarray      # city position
+    order_delivery: np.ndarray    # city position
     order_weight: np.ndarray
     order_req_type: np.ndarray    # str or None
     order_value: np.ndarray
     pickup_tw: np.ndarray         # (M, 2) int  [from, to]
     delivery_tw: np.ndarray       # (M, 2) int
-    order_priority: np.ndarray    # order idx sorted, most urgent first
+    order_priority: np.ndarray    # order position sorted, most urgent first
     compat: np.ndarray            # (M, T) bool
     stats: dict = field(default_factory=dict)
     service_min: int = C.SERVICE_MIN
@@ -82,7 +82,7 @@ def _rows(con, sql, sid):
 
 
 def list_scenarios(con):
-    return [r[0] for r in con.execute("SELECT scenario_id FROM scenario_stats ORDER BY scenario_id").fetchall()]
+    return [r[0] for r in con.execute("SELECT scenario_id FROM scenario_summary ORDER BY scenario_id").fetchall()]
 
 
 def load_scenario(con, scenario_id):
@@ -91,30 +91,30 @@ def load_scenario(con, scenario_id):
     if not snap:
         raise KeyError(f"scenario {sid} not in database; run fetch.py")
 
-    cities = _rows(con, "SELECT idx, city_id FROM city_idx WHERE scenario_id = ? ORDER BY idx", sid)
-    n = len(cities["idx"])
+    cities = _rows(con, "SELECT city_pos, city_id FROM city_index WHERE scenario_id = ? ORDER BY city_pos", sid)
+    n = len(cities["city_pos"])
     D_km = np.full((n, n), np.nan)
     D_min = np.full((n, n), INF, dtype=np.int32)
-    legs = con.execute("SELECT from_idx, to_idx, km, drive_min FROM legs WHERE scenario_id = ?", [sid]).fetchnumpy()
-    D_km[legs["from_idx"], legs["to_idx"]] = legs["km"]
-    D_min[legs["from_idx"], legs["to_idx"]] = legs["drive_min"]
+    city_distances = con.execute("SELECT from_pos, to_pos, km, drive_minutes FROM city_distances WHERE scenario_id = ?", [sid]).fetchnumpy()
+    D_km[city_distances["from_pos"], city_distances["to_pos"]] = city_distances["km"]
+    D_min[city_distances["from_pos"], city_distances["to_pos"]] = city_distances["drive_minutes"]
 
-    t = _rows(con, """SELECT idx, truck_id, start_idx, capacity_kg, type, cost_per_km, co2_per_km
-                      FROM truck_features WHERE scenario_id = ? ORDER BY idx""", sid)
-    o = _rows(con, """SELECT order_idx, order_id, pickup_idx, delivery_idx, weight_kg, required_truck_type, value,
-                             pickup_tw_from, pickup_tw_to, delivery_tw_from, delivery_tw_to, priority_rank
-                      FROM order_features WHERE scenario_id = ? ORDER BY order_idx""", sid)
-    m, k = len(o.get("order_idx", [])), len(t.get("idx", []))
+    t = _rows(con, """SELECT truck_pos, truck_id, start_pos, capacity_kg, type, cost_per_km, co2_per_km
+                      FROM truck_features WHERE scenario_id = ? ORDER BY truck_pos""", sid)
+    o = _rows(con, """SELECT order_pos, order_id, pickup_pos, delivery_pos, weight_kg, required_truck_type, value,
+                             pickup_tw_from, pickup_tw_to, delivery_tw_from, delivery_tw_to, planning_order
+                      FROM order_features WHERE scenario_id = ? ORDER BY order_pos""", sid)
+    m, k = len(o.get("order_pos", [])), len(t.get("truck_pos", []))
 
     def tw(lo, hi):
         return np.array([[0 if a is None else a, INF if b is None else b]
                          for a, b in zip(o[lo], o[hi])], dtype=np.int32).reshape(m, 2)
 
     compat = np.zeros((m, k), dtype=bool)
-    pairs = con.execute("SELECT order_idx, truck_idx FROM order_truck_compat WHERE scenario_id = ?", [sid]).fetchnumpy()
-    compat[pairs["order_idx"], pairs["truck_idx"]] = True
+    pairs = con.execute("SELECT order_pos, truck_pos FROM order_truck_options WHERE scenario_id = ?", [sid]).fetchnumpy()
+    compat[pairs["order_pos"], pairs["truck_pos"]] = True
 
-    stats_cur = con.execute("SELECT * FROM scenario_stats WHERE scenario_id = ?", [sid])
+    stats_cur = con.execute("SELECT * FROM scenario_summary WHERE scenario_id = ?", [sid])
     stats_desc = [d[0] for d in stats_cur.description]
     stats = dict(zip(stats_desc, stats_cur.fetchall()[0]))
 
@@ -123,20 +123,20 @@ def load_scenario(con, scenario_id):
         city_ids=cities["city_id"], city_index={c: i for i, c in enumerate(cities["city_id"])},
         D_km=D_km, D_min=D_min,
         truck_ids=t.get("truck_id", []), truck_index={c: i for i, c in enumerate(t.get("truck_id", []))},
-        truck_start=np.array(t.get("start_idx", []), dtype=np.int32),
+        truck_start=np.array(t.get("start_pos", []), dtype=np.int32),
         truck_cap=np.array(t.get("capacity_kg", []), dtype=float),
         truck_type=np.array(t.get("type", []), dtype=object),
         truck_cost_km=np.array(t.get("cost_per_km", []), dtype=float),
         truck_co2_km=np.array(t.get("co2_per_km", []), dtype=float),
         order_ids=o.get("order_id", []), order_index={c: i for i, c in enumerate(o.get("order_id", []))},
-        order_pickup=np.array(o.get("pickup_idx", []), dtype=np.int32),
-        order_delivery=np.array(o.get("delivery_idx", []), dtype=np.int32),
+        order_pickup=np.array(o.get("pickup_pos", []), dtype=np.int32),
+        order_delivery=np.array(o.get("delivery_pos", []), dtype=np.int32),
         order_weight=np.array(o.get("weight_kg", []), dtype=float),
         order_req_type=np.array(o.get("required_truck_type", []), dtype=object),
         order_value=np.array([np.nan if v is None else v for v in o.get("value", [])], dtype=float),
         pickup_tw=tw("pickup_tw_from", "pickup_tw_to") if m else np.zeros((0, 2), np.int32),
         delivery_tw=tw("delivery_tw_from", "delivery_tw_to") if m else np.zeros((0, 2), np.int32),
-        order_priority=np.argsort(np.array(o.get("priority_rank", []))).astype(np.int32),
+        order_priority=np.argsort(np.array(o.get("planning_order", []))).astype(np.int32),
         compat=compat, stats=stats,
     )
 

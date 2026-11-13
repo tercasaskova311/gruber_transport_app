@@ -21,39 +21,39 @@ ERRORS = {
         SELECT 'none' WHERE (SELECT count(*) FROM cur_snapshots) = 0""",
     "counts differ from /Scenarios": """
         SELECT s.scenario_id, s.cities_count, st.n_cities, s.trucks_count, st.n_trucks, s.orders_count, st.n_orders
-        FROM cur_snapshots s JOIN scenario_stats st USING (scenario_id)
+        FROM cur_snapshots s JOIN scenario_summary st USING (scenario_id)
         WHERE (s.cities_count IS NOT NULL AND s.cities_count <> coalesce(st.n_cities, 0))
            OR (s.trucks_count IS NOT NULL AND s.trucks_count <> coalesce(st.n_trucks, 0))
            OR (s.orders_count IS NOT NULL AND s.orders_count <> coalesce(st.n_orders, 0))""",
-    "legs is not N*N": """
-        SELECT c.scenario_id, c.n, l.n_legs
-        FROM (SELECT scenario_id, count(*) n FROM city_idx GROUP BY ALL) c
-        LEFT JOIN (SELECT scenario_id, count(*) n_legs FROM legs GROUP BY ALL) l USING (scenario_id)
-        WHERE coalesce(l.n_legs, 0) <> c.n * c.n""",
+    "city_distances is not N*N": """
+        SELECT c.scenario_id, c.n, l.n_rows
+        FROM (SELECT scenario_id, count(*) n FROM city_index GROUP BY ALL) c
+        LEFT JOIN (SELECT scenario_id, count(*) n_rows FROM city_distances GROUP BY ALL) l USING (scenario_id)
+        WHERE coalesce(l.n_rows, 0) <> c.n * c.n""",
     "distance rows with unknown city": """
         SELECT d.scenario_id, d.from_city, d.to_city FROM cur_distances d
-        LEFT JOIN city_idx a ON a.scenario_id = d.scenario_id AND a.city_id = d.from_city
-        LEFT JOIN city_idx b ON b.scenario_id = d.scenario_id AND b.city_id = d.to_city
-        WHERE a.idx IS NULL OR b.idx IS NULL LIMIT 20""",
+        LEFT JOIN city_index a ON a.scenario_id = d.scenario_id AND a.city_id = d.from_city
+        LEFT JOIN city_index b ON b.scenario_id = d.scenario_id AND b.city_id = d.to_city
+        WHERE a.city_pos IS NULL OR b.city_pos IS NULL LIMIT 20""",
     "diagonal not 0": """
-        SELECT scenario_id, from_city, km FROM legs WHERE from_idx = to_idx AND km <> 0 LIMIT 20""",
+        SELECT scenario_id, from_city, km FROM city_distances WHERE from_pos = to_pos AND km <> 0 LIMIT 20""",
     "missing or negative km": """
-        SELECT scenario_id, from_city, to_city, km FROM legs WHERE km IS NULL OR km < 0 LIMIT 20""",
+        SELECT scenario_id, from_city, to_city, km FROM city_distances WHERE km IS NULL OR km < 0 LIMIT 20""",
     "matrix not symmetric": """
         SELECT a.scenario_id, a.from_city, a.to_city, a.km, b.km AS km_back
-        FROM legs a JOIN legs b ON b.scenario_id = a.scenario_id AND b.from_idx = a.to_idx AND b.to_idx = a.from_idx
-        WHERE a.from_idx < a.to_idx AND abs(a.km - b.km) > 1e-6 LIMIT 20""",
-    "idx not contiguous 0..N-1": """
-        SELECT 'city_idx' t, scenario_id FROM city_idx GROUP BY ALL HAVING min(idx) <> 0 OR max(idx) <> count(DISTINCT idx) - 1 OR count(*) <> count(DISTINCT idx)
+        FROM city_distances a JOIN city_distances b ON b.scenario_id = a.scenario_id AND b.from_pos = a.to_pos AND b.to_pos = a.from_pos
+        WHERE a.from_pos < a.to_pos AND abs(a.km - b.km) > 1e-6 LIMIT 20""",
+    "positions not contiguous 0..N-1": """
+        SELECT 'city_index' t, scenario_id FROM city_index GROUP BY ALL HAVING min(city_pos) <> 0 OR max(city_pos) <> count(DISTINCT city_pos) - 1 OR count(*) <> count(DISTINCT city_pos)
         UNION ALL
-        SELECT 'truck_features', scenario_id FROM truck_features GROUP BY ALL HAVING min(idx) <> 0 OR max(idx) <> count(DISTINCT idx) - 1 OR count(*) <> count(DISTINCT idx)
+        SELECT 'truck_features', scenario_id FROM truck_features GROUP BY ALL HAVING min(truck_pos) <> 0 OR max(truck_pos) <> count(DISTINCT truck_pos) - 1 OR count(*) <> count(DISTINCT truck_pos)
         UNION ALL
-        SELECT 'order_features', scenario_id FROM order_features GROUP BY ALL HAVING min(order_idx) <> 0 OR max(order_idx) <> count(DISTINCT order_idx) - 1 OR count(*) <> count(DISTINCT order_idx)""",
+        SELECT 'order_features', scenario_id FROM order_features GROUP BY ALL HAVING min(order_pos) <> 0 OR max(order_pos) <> count(DISTINCT order_pos) - 1 OR count(*) <> count(DISTINCT order_pos)""",
     "truck start city unknown": """
-        SELECT scenario_id, truck_id, start_city FROM truck_features WHERE start_idx IS NULL""",
+        SELECT scenario_id, truck_id, start_city FROM truck_features WHERE start_pos IS NULL""",
     "order city unknown": """
         SELECT scenario_id, order_id, pickup_city, delivery_city FROM order_features
-        WHERE pickup_idx IS NULL OR delivery_idx IS NULL""",
+        WHERE pickup_pos IS NULL OR delivery_pos IS NULL""",
     "bad truck numbers": """
         SELECT scenario_id, truck_id, capacity_kg, cost_per_km, co2_per_km, type FROM truck_features
         WHERE coalesce(capacity_kg, 0) <= 0 OR cost_per_km IS NULL OR cost_per_km < 0
@@ -68,12 +68,12 @@ ERRORS = {
 
 WARNINGS = {
     "orders no truck can carry (type/capacity)": """
-        SELECT scenario_id, order_id, weight_kg, required_truck_type FROM order_features WHERE n_compatible_trucks = 0""",
+        SELECT scenario_id, order_id, weight_kg, required_truck_type FROM order_features WHERE trucks_that_fit = 0""",
     "orders whose windows can't both be met (slack < 0)": """
-        SELECT scenario_id, order_id, tw_slack_min FROM order_features WHERE tw_slack_min < 0""",
+        SELECT scenario_id, order_id, time_window_slack_minutes FROM order_features WHERE time_window_slack_minutes < 0""",
     "orders no truck can serve solo on time": """
-        SELECT scenario_id, order_id, n_compatible_trucks FROM order_features
-        WHERE n_compatible_trucks > 0 AND n_feasible_trucks = 0""",
+        SELECT scenario_id, order_id, trucks_that_fit FROM order_features
+        WHERE trucks_that_fit > 0 AND trucks_on_time = 0""",
     "orders with null value": """
         SELECT scenario_id, order_id FROM order_features WHERE value IS NULL""",
     "orders whose time-window fields were not recognised (check raw_json!)": """

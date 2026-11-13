@@ -16,7 +16,7 @@ import duckdb, os, load
 con = load.connect()
 n = con.execute("SELECT count(DISTINCT snapshot_id) FROM snapshots").fetchall()[0][0]
 assert n == 2, n
-print(con.sql("SELECT scenario_id, order_id, tw_type, pickup_tw_from, pickup_tw_to, delivery_tw_from, delivery_tw_to, tw_slack_min, n_compatible_trucks, priority_rank FROM order_features WHERE tw_type<>'none' ORDER BY scenario_id, priority_rank LIMIT 8"))
+print(con.sql("SELECT scenario_id, order_id, time_window_type, pickup_tw_from, pickup_tw_to, delivery_tw_from, delivery_tw_to, time_window_slack_minutes, trucks_that_fit, planning_order FROM order_features WHERE time_window_type<>'none' ORDER BY scenario_id, planning_order LIMIT 8"))
 sc = load.load_scenario(con, "2")
 assert sc.D_km.shape == (12, 12) and not (sc.D_km != sc.D_km.T).any()
 assert (sc.delivery_tw[:, 0] <= sc.delivery_tw[:, 1]).all()

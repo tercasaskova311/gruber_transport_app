@@ -25,4 +25,4 @@ if __name__ == "__main__":
         except checks.CheckFailed as e:
             print(e, file=sys.stderr)
             sys.exit(1)
-        print(con.sql("SELECT * FROM scenario_stats ORDER BY scenario_id"))
+        print(con.sql("SELECT * FROM scenario_summary ORDER BY scenario_id"))
