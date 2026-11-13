@@ -34,7 +34,8 @@ SEM = {
     "ignored_delivery_drives": False,
     # Lateness reference: "arrival" (arrival - to) or "start" (service start - to).
     "late_ref": "arrival",
-    # Order lateness = "max" over its stops, or "sum".
+    # Order lateness for value decay and the 60 min cut-off = "max" over its stops
+    # (verified: probes late 42+4 and 36+42 both kept 65 %).
     "order_late": "max",
     # orders_late counts every order with lateness > 0 (incl. > 60 min).
     "orders_late_incl_too_late": True,
@@ -118,7 +119,8 @@ def simulate(sc: Scenario, plan: dict) -> dict:
 
     truck_out = []
     fulfilled: dict[str, float] = {}      # order -> value factor
-    order_late: dict[str, int] = {}       # order -> late minutes (for delivered orders)
+    order_late: dict[str, int] = {}       # order -> max late minutes over its stops
+    order_late_sum: dict[str, int] = {}   # order -> summed late minutes (penalized_late_min)
     too_late: set[str] = set()
     tot_km = tot_loaded = tot_cost = tot_co2 = util_num = 0.0
     total_late_min = 0
@@ -228,6 +230,7 @@ def simulate(sc: Scenario, plan: dict) -> dict:
                     lates = late_by_order[oid]
                     ol = max(lates) if SEM["order_late"] == "max" else sum(lates)
                     order_late[oid] = ol
+                    order_late_sum[oid] = sum(lates)
                     if ol > LATE_MAX:
                         too_late.add(oid)
                     else:
@@ -245,9 +248,6 @@ def simulate(sc: Scenario, plan: dict) -> dict:
         total_late_min += sum(e["late_min"] for e in schedule)
         if clock.n_unverified:
             unverified.append(f"{tid}: stood still >= 11 h mid-day before driving (idle_counts_as_rest)")
-        for oid, ls in late_by_order.items():
-            if sum(1 for x in ls if x > 0) > 1:
-                unverified.append(f"{tid}/{oid}: late at both pickup and delivery (order_late)")
         cost = km * tr.cost_per_km
         co2 = km * tr.co2_per_km
         tot_km += km
@@ -280,7 +280,7 @@ def simulate(sc: Scenario, plan: dict) -> dict:
         "truck_utilization": (util_num / tot_km) if tot_km > 0 else 0.0,
         "orders_late": n_late, "orders_too_late": len(too_late),
         "total_late_min": total_late_min,
-        "penalized_late_min": sum(order_late[o] for o in late_orders),
+        "penalized_late_min": sum(order_late_sum[o] for o in late_orders),
         "trucks": truck_out,
     }
     validation = {"is_valid": not violations, "violations": violations}

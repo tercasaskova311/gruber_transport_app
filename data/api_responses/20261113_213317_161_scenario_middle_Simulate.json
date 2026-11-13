@@ -1,0 +1,213 @@
+{
+ "kind": "Simulate",
+ "scenario": "scenario_middle",
+ "status": 200,
+ "time": "2026-11-13T21:33:17",
+ "plan": {
+  "T07": [
+   {
+    "action": "pickup",
+    "order": "O013"
+   },
+   {
+    "action": "pickup",
+    "order": "O050"
+   },
+   {
+    "action": "pickup",
+    "order": "O016"
+   },
+   {
+    "action": "pickup",
+    "order": "O019"
+   },
+   {
+    "action": "delivery",
+    "order": "O050"
+   },
+   {
+    "action": "delivery",
+    "order": "O016"
+   },
+   {
+    "action": "delivery",
+    "order": "O019"
+   },
+   {
+    "action": "pickup",
+    "order": "O032"
+   },
+   {
+    "action": "delivery",
+    "order": "O013"
+   },
+   {
+    "action": "pickup",
+    "order": "O003"
+   },
+   {
+    "action": "delivery",
+    "order": "O032"
+   },
+   {
+    "action": "delivery",
+    "order": "O003"
+   }
+  ]
+ },
+ "response": {
+  "total_km": 3502,
+  "loaded_km": 3259,
+  "empty_km": 243,
+  "total_cost": 6723.84,
+  "total_co2": 3852.2,
+  "orders_fulfilled": 6,
+  "orders_total": 50,
+  "value_fulfilled": 5.975,
+  "value_lost_to_lateness": 0.525,
+  "value_total": 59,
+  "truck_utilization": 0.3987,
+  "orders_late": 1,
+  "orders_too_late": 0,
+  "total_late_min": 78,
+  "penalized_late_min": 78,
+  "trucks": [
+   {
+    "truck": "T07",
+    "route": [
+     "C080",
+     "C011",
+     "C118",
+     "C022",
+     "C080",
+     "C045",
+     "C048",
+     "C062",
+     "C107",
+     "C008",
+     "C011"
+    ],
+    "total_km": 3502,
+    "loaded_km": 3259,
+    "empty_km": 243,
+    "cost": 6723.84,
+    "co2": 3852.2,
+    "max_load_kg": 17300,
+    "utilization": 0.3987,
+    "finish_min": 6936,
+    "driving_min": 3006,
+    "break_and_rest_min": 3570,
+    "schedule": [
+     {
+      "action": "pickup",
+      "order": "O013",
+      "city": "C011",
+      "arrival_min": 209,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 239
+     },
+     {
+      "action": "pickup",
+      "order": "O050",
+      "city": "C118",
+      "arrival_min": 591,
+      "wait_min": 0,
+      "late_min": 36,
+      "departure_min": 621
+     },
+     {
+      "action": "pickup",
+      "order": "O016",
+      "city": "C118",
+      "arrival_min": 621,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 651
+     },
+     {
+      "action": "pickup",
+      "order": "O019",
+      "city": "C022",
+      "arrival_min": 1707,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 1737
+     },
+     {
+      "action": "delivery",
+      "order": "O050",
+      "city": "C080",
+      "arrival_min": 1797,
+      "wait_min": 0,
+      "late_min": 42,
+      "departure_min": 1827
+     },
+     {
+      "action": "delivery",
+      "order": "O016",
+      "city": "C045",
+      "arrival_min": 2902,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 2932
+     },
+     {
+      "action": "delivery",
+      "order": "O019",
+      "city": "C045",
+      "arrival_min": 2932,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 2962
+     },
+     {
+      "action": "pickup",
+      "order": "O032",
+      "city": "C048",
+      "arrival_min": 3172,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 3202
+     },
+     {
+      "action": "delivery",
+      "order": "O013",
+      "city": "C062",
+      "arrival_min": 4446,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 4476
+     },
+     {
+      "action": "pickup",
+      "order": "O003",
+      "city": "C107",
+      "arrival_min": 5737,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 5767
+     },
+     {
+      "action": "delivery",
+      "order": "O032",
+      "city": "C008",
+      "arrival_min": 6723,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 6753
+     },
+     {
+      "action": "delivery",
+      "order": "O003",
+      "city": "C011",
+      "arrival_min": 6906,
+      "wait_min": 0,
+      "late_min": 0,
+      "departure_min": 6936
+     }
+    ]
+   }
+  ]
+ }
+}

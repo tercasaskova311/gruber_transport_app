@@ -41,15 +41,17 @@ after API rounding.
   resets the break counter.
 - `break_and_rest_min` counts only the inserted minutes.
 - Lateness = max(0, arrival - to). Value factor 1 - 0.5 * late/60; > 60 min -> not fulfilled.
+- An order late at both stops: value decay and the 60 min cut-off use the **max** of the two
+  late times; `penalized_late_min` adds **both** (verified with 2 probes: late 42+4 and
+  36+42, both kept 65 % of value, penalized 46 and 78).
 - `orders_late` counts all late orders including the too-late ones; `penalized_late_min`
-  sums lateness of fulfilled late orders; `total_late_min` sums `late_min` over all stops.
+  sums the stop lateness of fulfilled late orders; `total_late_min` sums `late_min` over all stops.
 
 ## Rounding
 Score and breakdown, costs and CO2: 2 decimals. Utilization and order values: 4 decimals.
 The score is computed from unrounded components and then rounded.
 
 ## Not observed (unverified)
-- Standing still >= 11 h before driving: assumed to count as a daily rest.
-- An order late at both pickup and delivery: lateness assumed = max of the two.
-Window generation makes both practically unreachable (windows are set close to the earliest
-arrival of the nearest truck); `simulate()` returns `_unverified` notes if a plan hits them.
+- Standing still >= 11 h before driving: assumed to count as a daily rest. Unreachable with
+  the current data: max wait ~265 min, max consecutive same-city stops 12 (360 min service),
+  so idle time stays below 660 min. `simulate()` returns an `_unverified` note if a plan hits it.

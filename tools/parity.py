@@ -100,7 +100,8 @@ def _fresh_matches_snapshot(c: api.Client, sc) -> bool:
 
 def cmd_send(a):
     sid = a.scenario
-    sset = json.loads((PARITY_DIR / f"{sid}.json").read_text())
+    sset = json.loads((PARITY_DIR / (a.set or f"{sid}.json")).read_text())
+    assert sset["scenario"] == sid, "plan set is for another scenario"
     sc = loader.load(sid, sset["snapshot"])
     c = api.Client()
     if not _fresh_matches_snapshot(c, sc):
@@ -180,7 +181,7 @@ def main():
     sp = ap.add_subparsers(dest="cmd", required=True)
     b = sp.add_parser("build"); b.add_argument("--n", type=int, default=20); b.add_argument("--seed", type=int, default=1)
     s = sp.add_parser("send"); s.add_argument("scenario"); s.add_argument("--kinds", default="Simulate,Score")
-    s.add_argument("--only"); s.add_argument("--i-am-sure", action="store_true")
+    s.add_argument("--only"); s.add_argument("--set", help="plan set file in data/parity/"); s.add_argument("--i-am-sure", action="store_true")
     c = sp.add_parser("compare"); c.add_argument("scenario", nargs="?"); c.add_argument("--tol", type=float, default=1e-9)
     c.add_argument("--show", type=int, default=12)
     a = ap.parse_args()
