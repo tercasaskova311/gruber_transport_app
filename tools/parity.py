@@ -13,7 +13,8 @@ import json
 import random
 import sys
 
-from gruber import api, config, loader, plangen, simulator
+from gruber import api, config, loader, simulator
+from tools import plangen
 
 PARITY_DIR = config.DATA_DIR / "parity"
 SCEN = ["scenario_small", "scenario_middle", "scenario_big"]

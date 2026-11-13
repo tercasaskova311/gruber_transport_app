@@ -6,7 +6,8 @@ import json
 import random
 import sys
 
-from gruber import loader, plangen, simulator
+from gruber import loader, simulator
+from tools import plangen
 from gruber.api import Client
 
 SCEN = ["scenario_small", "scenario_middle", "scenario_big", "scenario_competitive"]

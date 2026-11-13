@@ -3,4 +3,4 @@ __pycache__/
 *.pyc
 out/
 .pytest_cache/
-data/api_responses/*_Validate.json
+data/api_responses/
