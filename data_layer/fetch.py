@@ -216,7 +216,25 @@ def parse_distance_csv(text):
 # Snapshot logic
 # ---------------------------------------------------------------------------
 def init_schema(con):
+    _migrate_old_results(con)
     con.execute((C.HERE / "schema.sql").read_text())
+
+
+def _migrate_old_results(con):
+    """results.runs from before the API-shaped layout (no plan_hash column): drop it if
+    empty, otherwise keep it as results.*_legacy. Safe to call every time."""
+    cols = {r[0] for r in con.execute(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_schema = 'results' AND table_name = 'runs'").fetchall()}
+    if not cols or "plan_hash" in cols:
+        return
+    n = con.execute("SELECT count(*) FROM results.runs").fetchone()[0]
+    for t in ("run_stops", "runs"):
+        if n == 0:
+            con.execute(f"DROP TABLE IF EXISTS results.{t}")
+        else:
+            con.execute(f"ALTER TABLE IF EXISTS results.{t} RENAME TO {t}_legacy")
+    log(f"results.runs had the old layout ({n} rows) -> {'dropped' if n == 0 else 'renamed to *_legacy'}")
 
 
 def fingerprint(scenarios, cities_by_sid):
@@ -236,7 +254,7 @@ def fetch_snapshot(con, only=None, force=False):
     fp = fingerprint(scenarios, cities)
 
     last = dict(con.execute(
-        f"SELECT scenario_id, fingerprint FROM cur_snapshots WHERE scenario_id IN ({','.join('?' * len(sids))})",
+        f"SELECT scenario_id, fingerprint FROM raw.cur_snapshots WHERE scenario_id IN ({','.join('?' * len(sids))})",
         sids).fetchall())
     if not force and all(last.get(sid) == fp for sid in sids):
         log(f"unchanged ({len(sids)} scenarios, fingerprint {fp[:10]})")
@@ -267,11 +285,11 @@ def fetch_snapshot(con, only=None, force=False):
     try:
         for sid, (s, cities_j, trucks, orders, dist_csv, folder) in payload.items():
             key = (snap, sid)
-            con.executemany("INSERT INTO cities VALUES (?,?,?,?,?,?,?,?)", [
+            con.executemany("INSERT INTO raw.cities VALUES (?,?,?,?,?,?,?,?)", [
                 key + (_id(pick(c, "id")), pick(c, "name"), pick(c, "country"),
                        pick(c, "latitude", "lat"), pick(c, "longitude", "lon", "lng"), json.dumps(c))
                 for c in cities_j])
-            con.executemany("INSERT INTO trucks VALUES (?,?,?,?,?,?,?,?,?)", [
+            con.executemany("INSERT INTO raw.trucks VALUES (?,?,?,?,?,?,?,?,?)", [
                 key + (_id(pick(t, "id")), _id(pick(t, "start_city", "start_city_id", "startCityId", "depot")),
                        pick(t, "capacity_kg", "capacity"), pick(t, "type", "truck_type"),
                        pick(t, "cost_per_km"), pick(t, "co2_per_km", "emissions_per_km"), json.dumps(t))
@@ -290,19 +308,19 @@ def fetch_snapshot(con, only=None, force=False):
                     pick(o, "value"),
                     *(tw[c] for c in TW_COLS),
                     json.dumps(o)))
-            con.executemany("INSERT INTO orders VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
+            con.executemany("INSERT INTO raw.orders VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
 
             long_csv = folder / "distances_long.csv"
             with long_csv.open("w", newline="") as f:
                 csv.writer(f).writerows(parse_distance_csv(dist_csv))
             path = str(long_csv).replace("'", "''")
             con.execute(f"""
-                INSERT INTO distances
+                INSERT INTO raw.distances
                 SELECT ?, ?, from_city, to_city, km
                 FROM read_csv('{path}', header=false,
                      columns={{'from_city':'VARCHAR','to_city':'VARCHAR','km':'DOUBLE'}})""", list(key))
 
-            con.execute("INSERT INTO snapshots VALUES (?,?,?,?,?,?,?,?)", [
+            con.execute("INSERT INTO raw.snapshots VALUES (?,?,?,?,?,?,?,?)", [
                 snap, sid, now, fp, pick(s, "name"),
                 pick(s, "cities_count"), pick(s, "trucks_count"), pick(s, "orders_count")])
         con.execute("COMMIT")

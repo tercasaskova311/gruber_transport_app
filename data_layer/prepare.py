@@ -1,4 +1,4 @@
-"""prepare.py : rebuild solver tables (prepare.sql) from cur_* and run checks.
+"""prepare.py : rebuild the prep.* schema (prepare.sql) from raw.cur_* and run checks.
 
     python prepare.py          # exits non-zero if a check fails
 """
@@ -25,4 +25,4 @@ if __name__ == "__main__":
         except checks.CheckFailed as e:
             print(e, file=sys.stderr)
             sys.exit(1)
-        print(con.sql("SELECT * FROM scenario_summary ORDER BY scenario_id"))
+        print(con.sql("SELECT * FROM prep.scenario_summary ORDER BY scenario_id"))

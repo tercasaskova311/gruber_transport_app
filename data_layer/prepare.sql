@@ -1,38 +1,46 @@
--- prepare.sql : solver-ready tables built from cur_* only.
--- Rebuilt from scratch every time (CREATE OR REPLACE). Every join carries scenario_id.
+-- prepare.sql : solver-ready tables in schema prep.*, built from raw.cur_* only.
+-- The whole prep schema is dropped and rebuilt in ONE transaction, so readers never
+-- see a half-built state and tables removed from this file don't linger.
+-- Every join carries scenario_id.
 --
--- Time model (minutes since Day 1 06:00):
+-- Time model (challenge PDF 8.1; minutes since Day 1 06:00):
 --   drive_minutes = ceil(km * 60 / 70), 30 min service at every stop,
---   arriving early = wait, a window bound "to" is the latest SERVICE START.
--- Breaks / driving-hour limits are NOT modelled here (alone_* are optimistic).
+--   arriving early = wait until `from`; lateness = arrival - `to`;
+--   up to 60 min late keeps 100% -> 50% of the value, more than 60 min late = not fulfilled.
+-- NOT modelled here: the 45 min break after 4.5 h driving and the 11 h rest after 9 h
+-- driving. Every *_min / alone_* timing below is therefore OPTIMISTIC (a lower bound).
 
-CREATE OR REPLACE MACRO drive_minutes(km) AS CAST(ceil(km * 60.0 / 70.0 - 1e-9) AS INTEGER);
-CREATE OR REPLACE MACRO service_min() AS 30;
+BEGIN TRANSACTION;
+DROP SCHEMA IF EXISTS prep CASCADE;
+CREATE SCHEMA prep;
+
+CREATE OR REPLACE MACRO prep.drive_minutes(km) AS CAST(ceil(km * 60.0 / 70.0 - 1e-9) AS INTEGER);
+CREATE OR REPLACE MACRO prep.service_min() AS 30;
 
 -- ---------------------------------------------------------------------------
 -- city_index : dense 0..N-1 per scenario (row/col of the distance matrices)
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE city_index AS
+CREATE OR REPLACE TABLE prep.city_index AS
 SELECT scenario_id, snapshot_id, id AS city_id, name, country, latitude, longitude,
        CAST(row_number() OVER (PARTITION BY scenario_id ORDER BY id) - 1 AS INTEGER) AS city_pos
-FROM cur_cities;
+FROM raw.cur_cities;
 
 -- ---------------------------------------------------------------------------
 -- city_distances : full N x N matrix in long form
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE city_distances AS
+CREATE OR REPLACE TABLE prep.city_distances AS
 SELECT d.scenario_id,
        a.city_pos AS from_pos, b.city_pos AS to_pos,
        d.from_city, d.to_city,
-       d.km, drive_minutes(d.km) AS drive_minutes
-FROM cur_distances d
-JOIN city_index a ON a.scenario_id = d.scenario_id AND a.city_id = d.from_city
-JOIN city_index b ON b.scenario_id = d.scenario_id AND b.city_id = d.to_city;
+       d.km, prep.drive_minutes(d.km) AS drive_minutes
+FROM raw.cur_distances d
+JOIN prep.city_index a ON a.scenario_id = d.scenario_id AND a.city_id = d.from_city
+JOIN prep.city_index b ON b.scenario_id = d.scenario_id AND b.city_id = d.to_city;
 
 -- ---------------------------------------------------------------------------
 -- truck_features
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE truck_features AS
+CREATE OR REPLACE TABLE prep.truck_features AS
 SELECT t.scenario_id,
        CAST(row_number() OVER (PARTITION BY t.scenario_id ORDER BY t.id) - 1 AS INTEGER) AS truck_pos,
        t.id AS truck_id,
@@ -40,20 +48,20 @@ SELECT t.scenario_id,
        t.capacity_kg, t.type, t.cost_per_km, t.co2_per_km,
        CAST(dense_rank() OVER (PARTITION BY t.scenario_id ORDER BY t.cost_per_km) AS INTEGER) AS cost_rank,  -- 1 = cheapest
        CAST(dense_rank() OVER (PARTITION BY t.scenario_id ORDER BY t.co2_per_km)  AS INTEGER) AS co2_rank     -- 1 = cleanest
-FROM cur_trucks t
-LEFT JOIN city_index c ON c.scenario_id = t.scenario_id AND c.city_id = t.start_city;
+FROM raw.cur_trucks t
+LEFT JOIN prep.city_index c ON c.scenario_id = t.scenario_id AND c.city_id = t.start_city;
 
 -- ---------------------------------------------------------------------------
 -- order_base : order + indices + direct leg + window maths (helper for the rest)
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE order_base AS
+CREATE OR REPLACE TABLE prep.order_base AS
 WITH o AS (
     SELECT o.*,
            CAST(row_number() OVER (PARTITION BY o.scenario_id ORDER BY o.id) - 1 AS INTEGER) AS order_pos,
            p.city_pos AS pickup_pos, d.city_pos AS delivery_pos
-    FROM cur_orders o
-    LEFT JOIN city_index p ON p.scenario_id = o.scenario_id AND p.city_id = o.pickup_city
-    LEFT JOIN city_index d ON d.scenario_id = o.scenario_id AND d.city_id = o.delivery_city
+    FROM raw.cur_orders o
+    LEFT JOIN prep.city_index p ON p.scenario_id = o.scenario_id AND p.city_id = o.pickup_city
+    LEFT JOIN prep.city_index d ON d.scenario_id = o.scenario_id AND d.city_id = o.delivery_city
 )
 SELECT o.scenario_id, o.order_pos, o.id AS order_id,
        o.pickup_city, o.delivery_city, o.pickup_pos, o.delivery_pos,
@@ -65,69 +73,80 @@ SELECT o.scenario_id, o.order_pos, o.id AS order_id,
             WHEN o.pickup_tw_from IS NOT NULL OR o.pickup_tw_to IS NOT NULL THEN 'pickup'
             WHEN o.delivery_tw_from IS NOT NULL OR o.delivery_tw_to IS NOT NULL THEN 'delivery'
             ELSE 'none' END AS time_window_type,
-       -- earliest / latest moment the pickup service can START and still meet both windows
-       -- (arriving early at delivery is fine: the truck waits)
+       -- earliest / latest pickup ARRIVAL that can still meet both windows on time
+       -- (driving straight to the delivery, breaks not included; arriving early = wait)
        coalesce(o.pickup_tw_from, 0) AS earliest_pickup_minute,
        CASE WHEN o.pickup_tw_to IS NULL AND o.delivery_tw_to IS NULL THEN NULL
             ELSE least(coalesce(o.pickup_tw_to, 2147483647),
-                       coalesce(o.delivery_tw_to - service_min() - l.drive_minutes, 2147483647)) END AS latest_pickup_minute
+                       coalesce(o.delivery_tw_to - prep.service_min() - l.drive_minutes, 2147483647)) END AS latest_pickup_minute
 FROM o
-LEFT JOIN city_distances l ON l.scenario_id = o.scenario_id AND l.from_pos = o.pickup_pos AND l.to_pos = o.delivery_pos;
+LEFT JOIN prep.city_distances l ON l.scenario_id = o.scenario_id AND l.from_pos = o.pickup_pos AND l.to_pos = o.delivery_pos;
 
 -- ---------------------------------------------------------------------------
 -- order_truck_options : one row per (order, truck) that CAN carry it
 --   type rule: order with no required type fits any truck; otherwise types must match
---   alone_*: truck drives start -> pickup -> delivery with only this order
+--   alone_*: truck drives start -> pickup -> delivery with only this order, from minute 0,
+--   service and waiting included, breaks/rests NOT included (optimistic)
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE order_truck_options AS
+CREATE OR REPLACE TABLE prep.order_truck_options AS
 WITH x AS (
     SELECT o.scenario_id, o.order_pos, o.order_id, t.truck_pos AS truck_pos, t.truck_id,
-           s.km AS empty_km_to_pickup, s.drive_minutes AS start_to_pickup_min,
-           o.direct_km, o.direct_drive_min, t.cost_per_km, t.co2_per_km,
+           s.km AS empty_km_to_pickup, o.direct_km, o.direct_drive_min, t.cost_per_km, t.co2_per_km,
            o.pickup_tw_to, o.delivery_tw_from, o.delivery_tw_to,
+           s.drive_minutes                                      AS pickup_arrival_min,
            greatest(s.drive_minutes, coalesce(o.pickup_tw_from, 0)) AS pickup_start_min
-    FROM order_base o
-    JOIN truck_features t
+    FROM prep.order_base o
+    JOIN prep.truck_features t
       ON t.scenario_id = o.scenario_id
      AND (o.required_truck_type IS NULL OR lower(t.type) = lower(o.required_truck_type))
      AND o.weight_kg <= t.capacity_kg
-    LEFT JOIN city_distances s ON s.scenario_id = o.scenario_id AND s.from_pos = t.start_pos AND s.to_pos = o.pickup_pos
+    LEFT JOIN prep.city_distances s ON s.scenario_id = o.scenario_id AND s.from_pos = t.start_pos AND s.to_pos = o.pickup_pos
+), y AS (
+    SELECT *, pickup_start_min + prep.service_min() + direct_drive_min AS delivery_arrival_min FROM x
+), z AS (
+    SELECT *,
+           greatest(0, pickup_arrival_min   - coalesce(pickup_tw_to,   2147483647),
+                       delivery_arrival_min - coalesce(delivery_tw_to, 2147483647)) AS late
+    FROM y
 )
 SELECT scenario_id, order_pos, order_id, truck_pos, truck_id,
        empty_km_to_pickup,
        empty_km_to_pickup + direct_km                  AS alone_km,
        (empty_km_to_pickup + direct_km) * cost_per_km  AS alone_cost_eur,
        (empty_km_to_pickup + direct_km) * co2_per_km   AS alone_co2_kg,
-       pickup_start_min,
-       pickup_start_min + service_min() + direct_drive_min AS delivery_arrival_min,
-       (pickup_tw_to IS NULL OR pickup_start_min <= pickup_tw_to)
-       AND (delivery_tw_to IS NULL
-            OR greatest(pickup_start_min + service_min() + direct_drive_min, coalesce(delivery_tw_from, 0))
-               <= delivery_tw_to) AS alone_on_time
-FROM x;
+       pickup_arrival_min,
+       delivery_arrival_min,
+       greatest(delivery_arrival_min, coalesce(delivery_tw_from, 0)) + prep.service_min() AS alone_finish_min,
+       late                                            AS alone_late_min,      -- worse of pickup / delivery
+       late = 0                                        AS alone_on_time,       -- full value
+       late <= 60                                      AS alone_fulfillable,   -- still counts (>= 50% value)
+       CASE WHEN late = 0 THEN 1.0 WHEN late <= 60 THEN 1.0 - 0.5 * late / 60.0 ELSE 0.0 END AS alone_value_factor
+FROM z;
 
 -- ---------------------------------------------------------------------------
 -- order_features : order_base + truck availability + priority (1 = plan first)
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE order_features AS
+CREATE OR REPLACE TABLE prep.order_features AS
 WITH n AS (
     SELECT scenario_id, order_pos,
            count(*) AS trucks_that_fit,
            count(*) FILTER (WHERE alone_on_time) AS trucks_on_time,
+           count(*) FILTER (WHERE alone_fulfillable) AS trucks_fulfillable,
            min(alone_cost_eur) AS min_solo_cost
-    FROM order_truck_options GROUP BY ALL
+    FROM prep.order_truck_options GROUP BY ALL
 )
 SELECT o.*,
-       latest_pickup_minute - earliest_pickup_minute AS time_window_slack_minutes,   -- NULL = no deadline; < 0 = impossible even driving direct
+       latest_pickup_minute - earliest_pickup_minute AS time_window_slack_minutes,   -- NULL = no deadline; < 0 = can't be on time even driving direct
        coalesce(n.trucks_that_fit, 0) AS trucks_that_fit,
        coalesce(n.trucks_on_time, 0)   AS trucks_on_time,
+       coalesce(n.trucks_fulfillable, 0) AS trucks_fulfillable,
        n.min_solo_cost,
        CAST(row_number() OVER (
            PARTITION BY o.scenario_id
            ORDER BY coalesce(latest_pickup_minute - earliest_pickup_minute, 1e9),  -- tight windows first
                     coalesce(n.trucks_that_fit, 0),                      -- few trucks first
                     o.value DESC, o.weight_kg DESC, o.order_pos) AS INTEGER) AS planning_order
-FROM order_base o
+FROM prep.order_base o
 LEFT JOIN n ON n.scenario_id = o.scenario_id AND n.order_pos = o.order_pos;
 
 -- ---------------------------------------------------------------------------
@@ -135,24 +154,24 @@ LEFT JOIN n ON n.scenario_id = o.scenario_id AND n.order_pos = o.order_pos;
 --   similarity_distance: lower = more related. km part normalised by the scenario's
 --   longest leg, time part by one day, +1 if they need different truck types.
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE order_similarity AS
-WITH mx AS (SELECT scenario_id, nullif(max(km), 0) AS max_km FROM city_distances GROUP BY ALL)
+CREATE OR REPLACE TABLE prep.order_similarity AS
+WITH mx AS (SELECT scenario_id, nullif(max(km), 0) AS max_km FROM prep.city_distances GROUP BY ALL)
 SELECT a.scenario_id, a.order_pos AS a_pos, b.order_pos AS b_pos,
        lp.km AS pickup_km, ld.km AS delivery_km,
        (lp.km + ld.km) / (2 * mx.max_km)
        + abs(a.earliest_pickup_minute - b.earliest_pickup_minute) / 1440.0
        + CASE WHEN coalesce(a.required_truck_type, '') <> coalesce(b.required_truck_type, '') THEN 1 ELSE 0 END
          AS similarity_distance
-FROM order_base a
-JOIN order_base b ON b.scenario_id = a.scenario_id AND a.order_pos < b.order_pos
+FROM prep.order_base a
+JOIN prep.order_base b ON b.scenario_id = a.scenario_id AND a.order_pos < b.order_pos
 JOIN mx ON mx.scenario_id = a.scenario_id
-JOIN city_distances lp ON lp.scenario_id = a.scenario_id AND lp.from_pos = a.pickup_pos   AND lp.to_pos = b.pickup_pos
-JOIN city_distances ld ON ld.scenario_id = a.scenario_id AND ld.from_pos = a.delivery_pos AND ld.to_pos = b.delivery_pos;
+JOIN prep.city_distances lp ON lp.scenario_id = a.scenario_id AND lp.from_pos = a.pickup_pos   AND lp.to_pos = b.pickup_pos
+JOIN prep.city_distances ld ON ld.scenario_id = a.scenario_id AND ld.from_pos = a.delivery_pos AND ld.to_pos = b.delivery_pos;
 
 -- ---------------------------------------------------------------------------
 -- scenario_summary : one row per scenario, to eyeball difficulty
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE scenario_summary AS
+CREATE OR REPLACE TABLE prep.scenario_summary AS
 WITH o AS (
     SELECT scenario_id,
            count(*) AS n_orders,
@@ -163,15 +182,16 @@ WITH o AS (
            sum(direct_km) AS ideal_km,   -- sum of pickup->delivery km: lower bound on loaded km
            count(*) FILTER (WHERE trucks_that_fit = 0) AS orders_no_truck_fits,
            count(*) FILTER (WHERE time_window_slack_minutes < 0)        AS n_orders_tw_impossible,
-           count(*) FILTER (WHERE trucks_on_time = 0)   AS n_orders_no_solo_feasible
-    FROM order_features GROUP BY ALL
+           count(*) FILTER (WHERE trucks_on_time = 0)   AS n_orders_no_solo_feasible,
+           count(*) FILTER (WHERE trucks_fulfillable = 0) AS n_orders_no_solo_fulfillable
+    FROM prep.order_features GROUP BY ALL
 ), t AS (
     SELECT scenario_id, count(*) AS n_trucks, sum(capacity_kg) AS total_capacity_kg,
            max(capacity_kg) AS max_truck_kg,
            min(cost_per_km) AS min_cost_per_km, min(co2_per_km) AS min_co2_per_km
-    FROM truck_features GROUP BY ALL
+    FROM prep.truck_features GROUP BY ALL
 ), c AS (
-    SELECT scenario_id, count(*) AS n_cities FROM city_index GROUP BY ALL
+    SELECT scenario_id, count(*) AS n_cities FROM prep.city_index GROUP BY ALL
 )
 SELECT s.scenario_id, s.snapshot_id, s.name, c.n_cities, t.n_trucks, o.n_orders,
        o.total_weight_kg, t.total_capacity_kg,
@@ -179,8 +199,11 @@ SELECT s.scenario_id, s.snapshot_id, s.name, c.n_cities, t.n_trucks, o.n_orders,
        o.max_order_kg, t.max_truck_kg,
        o.total_value, o.pct_with_tw, o.ideal_km,
        t.min_cost_per_km, t.min_co2_per_km,
-       o.orders_no_truck_fits, o.n_orders_tw_impossible, o.n_orders_no_solo_feasible
-FROM cur_snapshots s
+       o.orders_no_truck_fits, o.n_orders_tw_impossible, o.n_orders_no_solo_feasible,
+       o.n_orders_no_solo_fulfillable
+FROM raw.cur_snapshots s
 LEFT JOIN c USING (scenario_id)
 LEFT JOIN t USING (scenario_id)
 LEFT JOIN o USING (scenario_id);
+
+COMMIT;
