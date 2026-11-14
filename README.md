@@ -71,16 +71,16 @@ time-window orders on their own, for 4 minutes and with three different search s
 stops at the same 42 of 63. For this data we believe we are close to the best score that can be
 reached; what polishing still finds is in the second decimal.
 
-### Scores
+### Scores confirmed by the official API
 
-| Scenario | Orders | Delivered | Confirmed by the official API | Best plan after polishing (local exact simulator) |
-|---|---|---|---|---|
-| small | 20 | 20 | 1000.00 | 1000.00 |
-| middle | 50 | 50 | 997.28 | 997.28 |
-| big | 120 | 115 | 971.72 | 971.75 |
-| competitive | 200 | 179 | 932.22 | 932.26 |
+| Scenario | Orders | Delivered | Score |
+|---|---|---|---|
+| small | 20 | 20 | 1000.00 |
+| middle | 50 | 50 | 997.28 |
+| big | 120 | 115 | 971.77 |
+| competitive | 200 | 179 | 932.26 |
 
-The local simulator has matched the API to the last digit on every submission so far.
+Every submission came back with exactly the score our local simulator predicted.
 All plans have zero rule violations. Measurements behind this section: `experiments/RESULTS.md`.
 Technical details: `solver/README.md`.
 

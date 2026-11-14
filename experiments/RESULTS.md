@@ -218,3 +218,8 @@ and no other place for O055 scores higher.
 Time-window orders alone on competitive (value-only sub-problem, 240 s, with ejection):
 `sisr-only` seed 2 and normal+`sisr` seed 4 serve 42 of 63 (value 68.0, the same 42 orders as the
 submitted plan); normal seed 3 and `sisr-only` seed 5 serve 41 (66.5). No improvement after 82 s.
+
+Third round (840 s more, seed 21): big 971.7486 -> 971.7673, competitive 932.2580 -> 932.2618
+(flat: +0.004 in 14 minutes). Both submitted on 2026-11-14: API score big 971.77, competitive
+932.26 (third and last Score call on competitive), equal to the local scores. All eight Score
+responses are in `results.runs` (source = score).
