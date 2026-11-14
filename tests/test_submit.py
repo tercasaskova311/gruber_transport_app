@@ -95,8 +95,16 @@ def env(tmp_path):
         f.write_text(json.dumps(p))
         return f
 
+    e.db_rows = []          # what would have been written to the team database
+
+    def fake_save(scenario, snapshot_id, plan, result, algo, source, params=None):
+        e.db_rows.append(dict(scenario=scenario, snapshot_id=snapshot_id, plan=plan, result=result,
+                              algo=algo, source=source, params=params))
+        return "fake-run-id", "saved to the database: fake"
+
     def run(scenario, plan_file, client, ask=None, **kw):
         ask = ask or Answers()
+        kw.setdefault("save_result", fake_save)     # tests never touch the real database
         code = submit.run(scenario, plan_file, client=client, ask=ask, data_dir=e.data_dir,
                           out_dir=e.out_dir, **kw)
         return code, ask
@@ -147,6 +155,7 @@ def test_answering_no_sends_nothing(env, answer):
     c = FakeClient(env.data)
     code, ask = env.run("scenario_small", pf, c, Answers(answer))
     assert code != 0 and len(ask.prompts) == 1 and not c.score_calls and not log_rows(env)
+    assert not env.db_rows
 
 
 def test_dry_run_asks_and_sends_nothing(env, capsys):
@@ -200,6 +209,12 @@ def test_successful_run_writes_response_plan_copy_and_log(env, capsys):
     assert len(rows) == 1 and rows[0]["scenario"] == "scenario_small"
     assert float(rows[0]["api_score"]) == saved["score"] == float(rows[0]["local_score"])
     assert len(rows[0]["plan_sha256"]) == 64
+    # the API response is handed to the team database as an API Score row
+    assert len(env.db_rows) == 1
+    db = env.db_rows[0]
+    assert (db["scenario"], db["snapshot_id"], db["source"], db["algo"]) ==            ("scenario_small", "20000101_000000", "score", "submit")
+    assert db["result"] == saved and db["plan"] == env.plan
+    assert db["params"]["plan_sha256"] == rows[0]["plan_sha256"]
     # a second run shows the recorded call and warns that this plan was already sent
     env.run("scenario_small", pf, c, Answers("n"))
     out = capsys.readouterr().out
@@ -223,3 +238,56 @@ def test_failed_score_request_is_logged_as_used(env, capsys):
     code, _ = env.run("scenario_small", pf, c, Answers("y"))
     rows = log_rows(env)
     assert code != 0 and len(rows) == 1 and rows[0]["api_score"].startswith("ERROR")
+
+
+def test_database_failure_does_not_fail_the_submission(env, capsys):
+    pf = env.setup("scenario_small")
+    c = FakeClient(env.data)
+
+    def broken(*a, **k):
+        raise RuntimeError("database is locked")
+    code, _ = env.run("scenario_small", pf, c, Answers("y"), save_result=broken)
+    out = capsys.readouterr().out
+    assert code == 0 and "not saved to the database" in out
+    assert len(c.score_calls) == 1 and len(log_rows(env)) == 1
+
+
+def test_dry_run_and_failed_checks_write_nothing_to_the_database(env):
+    pf = env.setup("scenario_small")
+    env.run("scenario_small", pf, FakeClient(env.data), Answers("y"), dry_run=True)
+    env.run("scenario_small", pf, FakeClient(env.data, validate_violations=[{"rule": "x"}]), Answers("y"))
+    assert not env.db_rows
+
+
+def test_results_db_roundtrip_with_a_real_duckdb(env, monkeypatch):
+    """End to end into a temporary DuckDB file built from ingestion/schema.sql."""
+    duckdb = pytest.importorskip("duckdb")
+    from ingestion import config as C
+    from simulator import results_db
+    db = env.tmp / "test.duckdb"
+    con = duckdb.connect(str(db))
+    con.execute((C.HERE / "schema.sql").read_text(encoding="utf-8"))
+    con.close()
+    monkeypatch.setattr(C, "DB_PATH", db)
+    sc = loader.from_raw("scenario_small", *(env.data[n] for n in PARTS))
+    resp = simulator.api_round(simulator.score(sc, env.plan))
+    run_id, msg = results_db.save("scenario_small", "snapX", env.plan, resp, algo="submit", source="score")
+    assert run_id, msg
+    con = duckdb.connect(str(db), read_only=True)
+    row = con.execute("SELECT scenario_id, snapshot_id, source, algo, score, n_violations, plan_json "
+                      "FROM results.runs WHERE run_id = ?", [run_id]).fetchone()
+    con.close()
+    assert row[:4] == ("scenario_small", "snapX", "score", "submit")
+    assert row[4] == resp["score"] and row[5] == 0 and json.loads(row[6]) == env.plan
+
+
+def test_results_db_without_database_only_reports(env, monkeypatch):
+    from simulator import results_db
+    try:
+        from ingestion import config as C
+        monkeypatch.setattr(C, "DB_PATH", env.tmp / "missing.duckdb")
+    except Exception:
+        pass                                    # duckdb not installed: save() must still not raise
+    run_id, msg = results_db.save("scenario_small", "s", env.plan, {}, algo="submit", source="score")
+    assert run_id is None and "not saved to the database" in msg
+

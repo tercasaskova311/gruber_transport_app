@@ -10,7 +10,8 @@ Steps, in this order; the first failed step stops the command with a non-zero ex
   3. API Validate       free; must be empty and agree with the local validation
   4. remaining calls    team info from the API (if it offers it) + local log of Score calls
   5. confirmation       y/N; scenario_competitive also needs --i-am-sure and the typed name
-  6. Score              one call; response and plan copy saved, log line appended
+  6. Score              one call; response and plan copy saved, log line appended; the response is
+                        also stored in the team database (results.runs, source=score) if it exists
 
 --dry-run does steps 1-4, prints what step 5 would show, and stops. No Simulate call is ever made.
 """
@@ -22,7 +23,7 @@ import json
 import time
 from pathlib import Path
 
-from . import config, loader, simulator
+from . import config, loader, results_db, simulator
 from .api import COMPETITIVE, Approval, Client
 
 PARTS = ("cities", "trucks", "orders", "distance_matrix")
@@ -110,7 +111,7 @@ def _banner(text: str) -> None:
 # ---------------------------------------------------------------- the command
 def run(scenario: str, plan_path, snapshot: str | None = None, dry_run: bool = False,
         i_am_sure: bool = False, client=None, ask=_stdin_ask,
-        data_dir: Path | None = None, out_dir: Path | None = None) -> int:
+        data_dir: Path | None = None, out_dir: Path | None = None, save_result=results_db.save) -> int:
     """Run the submission procedure. Returns the process exit code (0 = finished as intended)."""
     data_dir = Path(data_dir) if data_dir else config.DATA_DIR
     out_dir = Path(out_dir) if out_dir else config.OUT_DIR / "submissions"
@@ -260,6 +261,14 @@ def run(scenario: str, plan_path, snapshot: str | None = None, dry_run: bool = F
     (sub / f"{stamp}_score.json").write_text(json.dumps(resp, indent=1), encoding="utf-8")
     _append_log(out_dir, dict(row, api_score=resp.get("score")))
     print(f"      response saved to {sub / f'{stamp}_score.json'} (plan copy next to it)")
+    if save_result is not None:             # team database, for the dashboard; never fatal
+        try:
+            _, msg = save_result(scenario, snap.name, plan, resp, algo="submit", source="score",
+                                 params={"plan_file": str(plan_path), "plan_sha256": plan_hash,
+                                         "local_score": lr["score"]})
+        except Exception as e:
+            msg = f"not saved to the database ({type(e).__name__}: {e})"
+        print("      " + msg)
 
     ab = resp.get("breakdown") or {}
     lines = [("score", resp.get("score"), lr["score"])] + [(c, ab.get(c), b.get(c)) for c in COMPONENTS]

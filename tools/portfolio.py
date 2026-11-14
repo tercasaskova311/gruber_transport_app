@@ -59,6 +59,20 @@ def run_portfolio(folder: Path, runs: list[tuple[str, int]], time_limit: float, 
     return best, rows
 
 
+def save_best_to_db(folder: Path, out: Path, best: dict, time_limit: float, runs, save=None):
+    """Score best_plan.json with the exact simulator and store it in results.* (never raises)."""
+    from simulator import results_db, simulator
+    folder = Path(folder)
+    sid = folder.parent.name if folder.parent.name.startswith("scenario_") else folder.name
+    plan = json.loads((out / "best_plan.json").read_text(encoding="utf-8"))
+    result = simulator.score(bench.load_dir(sid, folder), plan)
+    result = {k: v for k, v in result.items() if not k.startswith("_")}
+    return (save or results_db.save)(
+        sid, folder.name, plan, result, algo="portfolio", source="local",
+        params={"config": best["config"], "seed": best["seed"], "time_limit_s": time_limit,
+                "runs": [f"{c}:{s}" for c, s in runs]})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("snapshot_dir")
@@ -68,6 +82,8 @@ def main():
     ap.add_argument("--out", default=None, help="default: out/portfolio/<time stamp>_<scenario>")
     ap.add_argument("--log", action="store_true", help="append the runs to experiments/results.csv")
     ap.add_argument("--note", default="portfolio")
+    ap.add_argument("--save-db", action="store_true",
+                    help="also store the best plan in the team database (results.runs, source=local)")
     a = ap.parse_args()
 
     runs = parse_runs(a.runs)
@@ -85,6 +101,8 @@ def main():
               f"F {r['fulfillment']:.2f}  loaded {r['loaded_ratio']:.2f}  {r['iterations']} it  0 violations")
     print(f"best: {best['config']} seed {best['seed']}  exact score {best['score']:.2f}  "
           f"({time.time() - t0:.0f}s wall)\nplan: {out / 'best_plan.json'}")
+    if a.save_db:
+        print(save_best_to_db(folder, out, best, a.time, runs)[1])
     if a.log:
         branch, sha = bench.git("rev-parse", "--abbrev-ref", "HEAD"), bench.git("rev-parse", "--short", "HEAD")
         new = not bench.RESULTS.exists()

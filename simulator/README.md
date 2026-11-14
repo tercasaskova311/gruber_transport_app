@@ -85,6 +85,10 @@ zero violations required, (3) free API Validate, (4) Score calls recorded in `ou
 (6) one Score call, saved to `out/submissions/<scenario>/` and compared with the local score.
 Always run it with `--dry-run` first: that does steps 1-4 and sends nothing to Score.
 
+If the team database exists (`data/hackathon.duckdb`), the API's Score response is also stored in
+`results.runs` with `source = score`, so the dashboard shows it. `python -m tools.portfolio ... --save-db`
+stores the portfolio's best plan the same way with `source = local`.
+
 ## API safety rules
 
 - GET `/Scenarios...` and Validate are free and unlimited.
