@@ -34,15 +34,16 @@ class Solution:
     truck_of: dict[int, int]                  # order -> truck
     unassigned: set[int]
     S: float = 0.0
+    geo: list = field(default_factory=list)   # per truck: cached (cities, loads, leg km) of the route, or None
 
     @classmethod
     def empty(cls, inst: Instance) -> "Solution":
         n_t = len(inst.trucks)
-        return cls([[] for _ in range(n_t)], [EMPTY] * n_t, Totals(), {}, set(range(inst.n_orders)), 0.0)
+        return cls([[] for _ in range(n_t)], [EMPTY] * n_t, Totals(), {}, set(range(inst.n_orders)), 0.0, [None] * n_t)
 
     def copy(self) -> "Solution":
         return Solution([r[:] for r in self.routes], self.res[:], self.tot.copy(),
-                        dict(self.truck_of), set(self.unassigned), self.S)
+                        dict(self.truck_of), set(self.unassigned), self.S, self.geo[:])
 
     def set_route(self, inst: Instance, k: int, route: list[Stop], res: TruckResult | None = None) -> None:
         if res is None or (route and res.states is None):
@@ -50,6 +51,7 @@ class Solution:
         self.tot.add(self.res[k], -1)
         self.tot.add(res, +1)
         self.routes[k] = route
+        self.geo[k] = None
         self.res[k] = res
         self.S = score_value(inst, self.tot)
 
@@ -75,7 +77,7 @@ class Insertion:
     res: TruckResult
 
 
-def _candidates(inst: Instance, route: list[Stop], k: int, oi: int, topk: int):
+def _candidates(inst: Instance, sol: Solution, k: int, oi: int, topk: int):
     """All capacity-feasible (a, b) positions, ranked by extra km; return the best `topk`.
 
     The route visits cities c[0]=start, c[1..m]. Pickup goes after c[a], delivery after c[b], a ≤ b.
@@ -83,37 +85,64 @@ def _candidates(inst: Instance, route: list[Stop], k: int, oi: int, topk: int):
     t = inst.trucks[k]
     o = inst.orders[oi]
     D = inst.D
-    orders = inst.orders
+    route = sol.routes[k]
     m = len(route)
-    c = [t.start] + [orders[x].p if is_p else orders[x].d for is_p, x in route]
-    L = [0.0] * (m + 1)                       # load after position s
-    load = 0.0
-    for s, (is_p, x) in enumerate(route, 1):
-        load += orders[x].weight if is_p else -orders[x].weight
-        L[s] = load
+    g = sol.geo[k]
+    if g is None:                             # depends only on the route: computed once per route
+        orders = inst.orders
+        c = [t.start] + [orders[x].p if is_p else orders[x].d for is_p, x in route]
+        L = [0.0] * (m + 1)                   # load after position s
+        load = 0.0
+        for s, (is_p, x) in enumerate(route, 1):
+            load += orders[x].weight if is_p else -orders[x].weight
+            L[s] = load
+        leg = [D[c[s]][c[s + 1]] for s in range(m)]
+        g = sol.geo[k] = (c, L, leg)
+    c, L, leg = g
     cap = t.capacity - o.weight + 1e-9
     P, Q = o.p, o.d
     DP, DQ = D[P], D[Q]
     # extra km to visit P (resp. Q) right after position s
-    insP = [DP[c[s]] + DP[c[s + 1]] - D[c[s]][c[s + 1]] for s in range(m)] + [DP[c[m]]]
-    insQ = [DQ[c[s]] + DQ[c[s + 1]] - D[c[s]][c[s + 1]] for s in range(m)] + [DQ[c[m]]]
+    dp = [DP[x] for x in c]
+    dq = [DQ[x] for x in c]
+    insP = [dp[s] + dp[s + 1] - leg[s] for s in range(m)]
+    insP.append(dp[m])
+    insQ = [dq[s] + dq[s + 1] - leg[s] for s in range(m)]
+    insQ.append(dq[m])
     dPQ = DP[Q]
+    if (m + 1) * (m + 2) // 2 <= topk:
+        prune = False
+    else:
+        prune = True
+        sufmin = insQ[:]                      # sufmin[b] = min(insQ[b:])
+        for b in range(m - 1, -1, -1):
+            if sufmin[b + 1] < sufmin[b]:
+                sufmin[b] = sufmin[b + 1]
+    keep = 4 * topk
+    thr = float("inf")                        # km of the topk-th best candidate found so far
     cands = []
     for a in range(m + 1):
         if L[a] > cap:
             continue
         # delivery right after pickup
-        dk = DP[c[a]] + dPQ + (DQ[c[a + 1]] - D[c[a]][c[a + 1]] if a < m else 0.0)
-        cands.append((dk, a, a))
+        dk = dp[a] + dPQ + (dq[a + 1] - leg[a] if a < m else 0.0)
+        if dk <= thr:
+            cands.append((dk, a, a))
         ip = insP[a]
-        running = L[a]
-        for b in range(a + 1, m + 1):
-            lb = L[b]
-            if lb > running:
-                if lb > cap:
-                    break                     # the load window only grows → stop
-                running = lb
-            cands.append((ip + insQ[b], a, b))
+        if a < m and (not prune or ip + sufmin[a + 1] <= thr):
+            running = L[a]
+            lim = thr - ip
+            for b in range(a + 1, m + 1):
+                lb = L[b]
+                if lb > running:
+                    if lb > cap:
+                        break                 # the load window only grows → stop
+                    running = lb
+                if insQ[b] <= lim:
+                    cands.append((ip + insQ[b], a, b))
+        if prune and len(cands) > keep:       # keep only the best topk, tighten the threshold
+            cands = heapq.nsmallest(topk, cands)
+            thr = cands[-1][0]
     if len(cands) > topk:
         return heapq.nsmallest(topk, cands)
     return cands
@@ -130,7 +159,7 @@ def best_insertion(inst: Instance, sol: Solution, oi: int, k: int, topk: int) ->
     while lt >= 0 and (O[route[lt][1]].ptw if route[lt][0] else O[route[lt][1]].dtw) is None:
         lt -= 1
     best = None
-    for _, a, b in _candidates(inst, route, k, oi, topk):
+    for _, a, b in _candidates(inst, sol, k, oi, topk):
         new_route = route[:a] + [(True, oi)] + route[a:b] + [(False, oi)] + route[b:]
         r = simulate_truck(inst, k, new_route, base=base, start=a, stop=(b if b > lt else lt) + 3)
         if not r.feasible:
@@ -257,7 +286,7 @@ def d_worst(inst, sol, q, rng, p=3.0):
         route = sol.routes[k]
         first = next(i for i, s in enumerate(route) if s[1] == oi)
         r = simulate_truck(inst, k, [s for s in route if s[1] != oi], base=sol.res[k], start=first)
-        loss.append((sol.S - score_value(inst, sol.tot.swapped(sol.res[k], r)), oi))
+        loss.append((sol.S - score_swapped(inst, sol.tot, sol.res[k], r), oi))
     loss.sort()
     out = []
     while loss and len(out) < q:
