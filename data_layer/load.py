@@ -21,7 +21,10 @@ from datetime import datetime, timezone
 import duckdb
 import numpy as np
 
-import config as C
+try:
+    from . import config as C
+except ImportError:  # run as a script from data_layer/ (python fetch.py)
+    import config as C
 
 INF = np.iinfo(np.int32).max // 2   # "no deadline", still safe to add to
 

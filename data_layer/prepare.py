@@ -6,9 +6,14 @@ import sys
 
 import duckdb
 
-import checks
-import config as C
-from fetch import init_schema, log
+try:
+    from . import checks
+    from . import config as C
+    from .fetch import init_schema, log
+except ImportError:  # run as a script from data_layer/ (python prepare.py)
+    import checks
+    import config as C
+    from fetch import init_schema, log
 
 
 def run(con):

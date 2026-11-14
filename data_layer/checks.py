@@ -9,7 +9,10 @@ import sys
 
 import duckdb
 
-import config as C
+try:
+    from . import config as C
+except ImportError:  # run as a script from data_layer/ (python fetch.py)
+    import config as C
 
 
 class CheckFailed(Exception):
