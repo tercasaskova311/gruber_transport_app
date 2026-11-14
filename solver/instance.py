@@ -68,6 +68,9 @@ class Instance:
     direct_km_total: float = 0.0
     min_cost_per_km: float = 0.0
     min_co2_per_km: float = 0.0
+    # where the data came from (set by load_from_db; empty for JSON folders)
+    scenario_id: str = ""
+    snapshot_id: str = ""
 
     @property
     def n_orders(self) -> int:
@@ -146,6 +149,87 @@ def load_instance(folder: str | Path) -> Instance:
                     [c.get("latitude", 0.0) for c in cities], [c.get("longitude", 0.0) for c in cities],
                     D, trucks, orders)
     precompute(inst)
+    return inst
+
+
+def list_db_scenarios() -> list[str]:
+    """Every scenario in the DB's prep schema (data_layer.load.list_scenarios)."""
+    import settings  # noqa: F401,PLC0415  (puts the repo root on sys.path)
+    from data_layer import load as dl  # noqa: PLC0415
+
+    con = dl.connect()
+    try:
+        return dl.list_scenarios(con)
+    finally:
+        con.close()
+
+
+def load_from_db(scenario_id: str) -> Instance:
+    """Build the same Instance as load_instance(), from data_layer's prep.* tables.
+
+    Positions (city_pos, truck_pos, order_pos) become the solver's indices. Plans are written
+    with ids, so the different order vs. the JSON files does not matter.
+    The connection comes from data_layer.load.connect() (same DB file, read-only, waits if
+    fetch.py is writing). Imported here so the JSON route keeps working without duckdb.
+    """
+    import settings  # noqa: F401,PLC0415  (puts the repo root on sys.path)
+    from data_layer import load as dl  # noqa: PLC0415
+
+    sid = str(scenario_id)
+    con = dl.connect()
+    try:
+        def rows(sql):
+            return con.execute(sql, [sid]).fetchall()
+
+        snap = rows("SELECT snapshot_id FROM raw.cur_snapshots WHERE scenario_id = ?")
+        if not snap:
+            raise KeyError(f"{sid} is not in {settings.DB_PATH}; run data_layer/run_all.sh")
+
+        cities = rows("""SELECT city_pos, city_id, name, latitude, longitude
+                         FROM prep.city_index WHERE scenario_id = ? ORDER BY city_pos""")
+        n = len(cities)
+        D = [[0.0] * n for _ in range(n)]
+        for a, b, km in rows("SELECT from_pos, to_pos, km FROM prep.city_distances WHERE scenario_id = ?"):
+            D[a][b] = float(km)
+
+        trucks = [Truck(pos, tid, start, float(cap), (typ or "standard").lower(), float(cost), float(co2))
+                  for pos, tid, start, cap, typ, cost, co2 in rows(
+                      """SELECT truck_pos, truck_id, start_pos, capacity_kg, type, cost_per_km, co2_per_km
+                         FROM prep.truck_features WHERE scenario_id = ? ORDER BY truck_pos""")]
+
+        def window(lo, hi):
+            if lo is None and hi is None:
+                return None
+            return (float(lo) if lo is not None else 0.0, float(hi) if hi is not None else float("inf"))
+
+        orders = []
+        for (pos, oid, p, d, w, req, value, pf, pt, df, dt) in rows(
+                """SELECT order_pos, order_id, pickup_pos, delivery_pos, weight_kg, required_truck_type,
+                          value, pickup_tw_from, pickup_tw_to, delivery_tw_from, delivery_tw_to
+                   FROM prep.order_features WHERE scenario_id = ? ORDER BY order_pos"""):
+            req = req.lower() if req else None
+            ptw, dtw = window(pf, pt), window(df, dt)
+            if value is None:
+                value = BASE_VALUE.get(req, 1.0) + (TIME_WINDOW_BONUS if (ptw or dtw) else 0.0)
+            orders.append(Order(pos, oid, p, d, float(w), req, float(value), ptw, dtw))
+
+        prep_options = rows("SELECT order_pos, truck_pos FROM prep.order_truck_options WHERE scenario_id = ?")
+    finally:
+        con.close()
+
+    inst = Instance([c[1] for c in cities], [c[2] or c[1] for c in cities],
+                    [c[3] or 0.0 for c in cities], [c[4] or 0.0 for c in cities],
+                    D, trucks, orders, scenario_id=sid, snapshot_id=snap[0][0])
+    precompute(inst)
+
+    # prep.order_truck_options and precompute() apply the same type + capacity rule;
+    # if they ever disagree, one of them changed and the solver would silently differ.
+    from_prep = [set() for _ in orders]
+    for o, k in prep_options:
+        from_prep[o].add(k)
+    bad = [orders[i].id for i in range(len(orders)) if from_prep[i] != set(inst.compatible[i])]
+    if bad:
+        raise ValueError(f"prep.order_truck_options disagrees with the solver for orders {bad[:5]}")
     return inst
 
 

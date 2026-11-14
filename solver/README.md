@@ -4,14 +4,27 @@ Decides **which truck gets each order, where the pickup goes, where the delivery
 
 ## Run it
 
+Everything at once, from the repo root (data layer → tests → solver):
+
 ```bash
-python make_fake_scenario.py --preset competitive --out data/fake_competitive   # offline test data
-python run.py data/fake_competitive --time 300                                    # build → optimize → compare
+./run_all.sh                    # SKIP_FETCH=1 to reuse the current DB; extra args go to run.py
 ```
 
-For real data, save each API response into a folder (`cities.json`, `trucks.json`, `orders.json`, `distance_matrix.json`) and run `python run.py <that folder>`.
+Solver only (defaults in [`settings.py`](settings.py), flags override them):
 
-Outputs in `<folder>/out/`:
+```bash
+python run.py                                     # all scenarios from the DuckDB (prep.* tables)
+python run.py scenario_big --time 300 --seed 1    # one scenario
+python run.py ../data/scenario_big/<ts> --source json            # a JSON folder instead
+python make_fake_scenario.py --preset competitive --out data/fake_competitive
+python run.py data/fake_competitive --source json                # offline test data
+```
+
+With the DB source, data comes from `instance.load_from_db()`, which builds the same `Instance` as
+the JSON loader (checked by `tests/test_from_prep.py`). Both plans are then scored by the verified
+simulator (`gruber/simulator.py`) and stored in `results.runs` (`--no-save` to skip).
+
+Outputs in `out/<scenario_id>/` (DB) or `<folder>/out/` (JSON):
 
 | File | What it is |
 |---|---|
