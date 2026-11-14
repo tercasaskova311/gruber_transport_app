@@ -70,6 +70,7 @@ def main():
     (out / "result.json").write_text(json.dumps({
         "config": args.config, "seed": args.seed, "time": args.time, "score": best.S,
         "initial_score": initial.S, "iterations": log.iterations,
+        "eject_moves": log.eject_moves, "eject_seconds": round(log.eject_seconds, 2),
         "construct_s": round(t_construct, 2), "total_s": round(time.time() - t0, 2)}, indent=1), encoding="utf-8")
     with open(out / "history.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)

@@ -373,12 +373,16 @@ class ALNSLog:
     destroy_stats: dict = field(default_factory=dict)
     repair_stats: dict = field(default_factory=dict)
     iterations: int = 0
+    eject_moves: int = 0            # ejection moves applied (ejection.py)
+    eject_seconds: float = 0.0
 
 
 def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 0,
          topk: int = 3, max_trucks: int | None = 8, bank_retry: int = 8, segment: int = 50, reaction: float = 0.2,
          sigma=(33.0, 9.0, 13.0), t_start_pct: float = 0.005, t_end: float = 0.01,
-         verbose: bool = True, max_iters: int | None = None) -> tuple[Solution, ALNSLog]:
+         verbose: bool = True, max_iters: int | None = None,
+         eject: bool = False, eject_every: int = 50, eject_share: float = 0.25,
+         block: bool = False) -> tuple[Solution, ALNSLog]:
     """Adaptive Large Neighbourhood Search (Ropke & Pisinger 2006) on the exact score.
 
     - destroy q orders, repair with ΔS insertion (all unassigned orders are retried too)
@@ -389,7 +393,12 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
     cur, best = start.copy(), start.copy()
     log = ALNSLog()
     log.history.append((0, 0.0, best.S))
-    dn, rn = list(DESTROY), list(REPAIR)
+    destroy = dict(DESTROY)
+    if eject or block:
+        import ejection                      # imported here: ejection.py imports this module
+    if block:
+        destroy["block"] = ejection.d_block
+    dn, rn = list(destroy), list(REPAIR)
     w_d, w_r = {d: 1.0 for d in dn}, {r: 1.0 for r in rn}
     sc_d, sc_r = {d: 0.0 for d in dn}, {r: 0.0 for r in rn}
     ct_d, ct_r = {d: 0 for d in dn}, {r: 0 for r in rn}
@@ -403,6 +412,22 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
     n = inst.n_orders
     q_min, q_max = max(2, int(0.05 * n)), max(4, min(40, int(0.3 * n)))
 
+    sweep_budget = max(0.5, min(5.0, 0.05 * time_limit))
+
+    def sweep(sol):
+        """Ejection sweep on `sol` unless ejection already used its share of the time."""
+        if log.eject_seconds > eject_share * max(time.time() - t0, 4 * sweep_budget):
+            return sol
+        ts = time.time()
+        sol, n = ejection.eject_sweep(inst, sol, rng, time_budget=sweep_budget)
+        log.eject_seconds += time.time() - ts
+        log.eject_moves += n
+        return sol
+
+    if eject:
+        best = sweep(best)
+        cur = best.copy()
+
     while True:
         el = time.time() - t0
         if el >= time_limit or (max_iters is not None and it >= max_iters):
@@ -415,8 +440,13 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
 
         cand = cur.copy()
         bank = [o for o in cand.unassigned]
-        removed = DESTROY[d](inst, cand, q, rng)
+        removed = destroy[d](inst, cand, q, rng)
+        first = []
+        if isinstance(removed, tuple):       # operator names unserved orders to insert first
+            removed, first = removed
         remove_orders(inst, cand, removed)
+        if first:
+            insert_orders(inst, cand, first, rng, regret=1, topk=4 * topk, max_trucks=None)
         to_insert = removed + rng.sample(bank, min(bank_retry, len(bank)))
         rng.shuffle(to_insert)
         insert_orders(inst, cand, to_insert, rng, topk=topk, max_trucks=max_trucks, **REPAIR[r])
@@ -429,12 +459,23 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
             log.history.append((it, round(el, 2), best.S))
             if verbose:
                 print(f"  it {it:5d}  {el:6.1f}s  new best {best.S:8.2f}  ({d} + {r}, q={q})")
+            if eject:
+                cur = sweep(cur)
+                if cur.S > best.S + 1e-9:
+                    best = cur.copy()
+                    log.history.append((it, round(el, 2), best.S))
         elif cand.S > cur.S + 1e-9:
             cur, gain = cand, sigma[1]
             stats_d[d]["better"] += 1; stats_r[r]["better"] += 1
         elif rng.random() < math.exp((cand.S - cur.S) / T):
             cur, gain = cand, sigma[2]
             stats_d[d]["accepted"] += 1; stats_r[r]["accepted"] += 1
+
+        if eject and it % eject_every == 0:
+            cur = sweep(cur)
+            if cur.S > best.S + 1e-9:
+                best = cur.copy()
+                log.history.append((it, round(el, 2), best.S))
 
         sc_d[d] += gain; sc_r[r] += gain
         ct_d[d] += 1; ct_r[r] += 1
