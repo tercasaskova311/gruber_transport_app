@@ -26,6 +26,7 @@ OSRM = "https://router.project-osrm.org/route/v1/driving/{};{}?overview=full&geo
 STORE_TOLERANCE = 0.002                          # degrees, ~200 m: invisible at any zoom we use
 
 _shapes = None
+_stamp = None                                    # file times when _shapes was read
 
 
 def _key(a, b):
@@ -39,10 +40,14 @@ def _read(path):
 
 
 def _load():
-    """Detailed shapes, falling back to the old coarse ones for legs not upgraded yet."""
-    global _shapes
-    if _shapes is None:
-        _shapes = {**_read(OLD_CACHE), **_read(CACHE)}
+    """Detailed shapes, falling back to the old coarse ones for legs not upgraded yet.
+    Re-read when a file changed on disk (e.g. roads.py was run in a terminal while the
+    dashboard was open), otherwise new roads only showed up after a restart."""
+    global _shapes, _stamp
+    stamp = tuple(p.stat().st_mtime if p.exists() else 0 for p in (OLD_CACHE, CACHE))
+    if _shapes is None or stamp != _stamp:
+        _smooth.clear()
+        _shapes, _stamp = {**_read(OLD_CACHE), **_read(CACHE)}, stamp
     return _shapes
 
 
@@ -85,8 +90,9 @@ def shape(a, b, tolerance=0.01):
     """[[lat, lon], ...] following the road from a to b (smoothed), or None if we don't have it.
     Starts and ends exactly on the city dots."""
     key, flipped = _key(a, b)
+    shapes = _load()                                # first: it clears _smooth if the file changed
     if (key, tolerance) not in _smooth:
-        points = _load().get(key)
+        points = shapes.get(key)
         _smooth[key, tolerance] = _simplify(points, tolerance) if points else None
     points = _smooth[key, tolerance]
     if not points:
