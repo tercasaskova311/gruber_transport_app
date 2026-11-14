@@ -34,6 +34,7 @@ scenarios the largest observed std, 3.1, is used for all three.)
 | first-leg moves (config `loaded`; reduced benchmark) | algo/loaded @ 7ee2d47 | - | 997.13 (-0.02, noise) | 971.03 (8 seeds: 3 low, 5 high; -0.16, noise) | 923.91 (-0.59, noise) | - | - | 903.71 (+1.41, noise) | reject: no effect | **rejected** (branch kept) |
 | time-window skeleton first, hard protection (config `tw-first`) | algo/tw-first @ cec1039 | 1000.00 (0) | 996.39 (**-0.76**, worse) | 971.05 (3 seeds; -0.14, noise) | 928.13 (8 seeds vs 923.39; **+4.74**, real) | 926.74 (-0.11, noise) | 895.56 (8 seeds vs 897.96; **-2.40**, worse) | 905.68 (+3.38, noise) | mixed: do not make default; keep as opt-in config for the portfolio | **accepted as opt-in** (merged, default unchanged) |
 | same, soft protection (config `tw-first-soft`, 3 scenarios x 3 seeds) | algo/tw-first @ cec1039 | - | - | 971.11 | 928.10 | - | 896.13 | - | same as hard within noise | merged as config, off |
+| **best** after merging tw-first as opt-in (default config, re-run) | best @ 8dea097 | 1000.00 | 997.10 | 970.48 (3 seeds: 2 low, 1 high) | 923.72 | 926.86 | 898.04 | 905.08 | default unchanged: all within noise of the reference above | - |
 
 Note: runs are time-limited, so the same code and seeds do not repeat exactly (compare the two
 rows above: same code, competitive 919.16 vs 919.91, fake_big_a 926.87 vs 925.77 with one seed
