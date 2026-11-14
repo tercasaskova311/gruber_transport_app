@@ -35,6 +35,7 @@ scenarios the largest observed std, 3.1, is used for all three.)
 | time-window skeleton first, hard protection (config `tw-first`) | algo/tw-first @ cec1039 | 1000.00 (0) | 996.39 (**-0.76**, worse) | 971.05 (3 seeds; -0.14, noise) | 928.13 (8 seeds vs 923.39; **+4.74**, real) | 926.74 (-0.11, noise) | 895.56 (8 seeds vs 897.96; **-2.40**, worse) | 905.68 (+3.38, noise) | mixed: do not make default; keep as opt-in config for the portfolio | **accepted as opt-in** (merged, default unchanged) |
 | same, soft protection (config `tw-first-soft`, 3 scenarios x 3 seeds) | algo/tw-first @ cec1039 | - | - | 971.11 | 928.10 | - | 896.13 | - | same as hard within noise | merged as config, off |
 | **best** after merging tw-first as opt-in (default config, re-run) | best @ 8dea097 | 1000.00 | 997.10 | 970.48 (3 seeds: 2 low, 1 high) | 923.72 | 926.86 | 898.04 | 905.08 | default unchanged: all within noise of the reference above | - |
+| portfolio: best of `default` + `tw-first`, same seed, 2 in parallel (computed from existing runs; this row is a best-of-2, not a single-run mean) | algo/portfolio | 1000.00 (0) | 997.12 (0) | 971.37 (+0.33, noise) | 928.13 (**+4.89** vs default, 8 seeds) | 926.86 (0) | 898.17 (+0.21, noise) | 905.68 (+1.99, noise) | accept: never below default, takes the tw-first gain where it exists | pending |
 
 Note: runs are time-limited, so the same code and seeds do not repeat exactly (compare the two
 rows above: same code, competitive 919.16 vs 919.91, fake_big_a 926.87 vs 925.77 with one seed
@@ -133,3 +134,24 @@ Reference = `best` (default config) with the same seeds; competitive and fake_co
 
 Competitive, 8 seeds: best 919.4-924.9, tw-first 925.1-931.8 (every tw-first seed above every
 best seed). Best single plan so far on competitive: 931.83 (179/200).
+
+## algo/portfolio details (60 s per run)
+
+A = one `default` run. B = best of (`default`, `tw-first`) with the same seed, two processes in
+parallel (taken from the benchmark rows above, which were measured two at a time). C = best of
+four runs (`default` and `tw-first`, seeds 1 and 2) on four processes at once: one measurement
+per scenario.
+
+| set | scenario | seeds | A mean | B mean (min-max) | B - A | tw-first wins | C (4 at once) | iterations per run, 2 at once -> 4 at once |
+|---|---|---|---|---|---|---|---|---|
+| real | small | 3 | 1000.00 | 1000.00 | 0 | 0/3 | 1000.00 | 17,700 -> 19,500 |
+| real | middle | 3 | 997.12 | 997.12 (997.11-997.14) | 0 | 0/3 | 997.06 | 4,800 -> 3,800 |
+| real | big | 3 | 971.04 | 971.37 (970.80-971.71) | +0.33 | 1/3 | 971.57 | 785 -> 460 |
+| real | competitive | 8 | 923.24 | 928.13 (925.11-931.83) | +4.89 | 8/8 | 931.69 | 420 -> 270 (default), 480 -> 380 (tw-first) |
+| fake | fake_big_a | 3 | 926.86 | 926.86 (926.82-926.91) | 0 | 0/3 | 926.91 | 310 -> 225 |
+| fake | fake_comp_a | 8 | 897.96 | 898.17 (897.23-898.71) | +0.21 | 1/8 | 898.67 | 258 -> 130 |
+| fake | fake_comp_b | 3 | 903.69 | 905.68 (904.98-907.07) | +1.99 | 3/3 | 904.44 | 272 -> 145 |
+
+Four at once roughly halves the iterations of each run on this 4-core laptop, and C is within
+noise of B everywhere. On big, 3 of the 4 parallel runs ended on the low plateau; the fourth
+saved the result.
