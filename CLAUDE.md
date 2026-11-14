@@ -3,13 +3,20 @@
 Team 5, Gruber Logistics hackathon 2026 (LOGIWISE). We build a pickup-and-delivery truck plan
 that maximises the official score, plus a demo around it.
 
-## Layout (merged on `origin/solver`; `main` may lag behind)
+## Branches
+
+- `develop`: the integration branch. Solver + simulator + data layer, all tests passing. Start new work here.
+- `main`: what we'd submit. `develop` is merged into it when stable.
+- Short-lived feature branches off `develop` (e.g. `feature/prep-pruning`), merged back when done.
+
+## Layout
 
 | Path | Part | What it is |
 |---|---|---|
 | `gruber/` | B, simulator | API client, snapshot loader, **exact local copy of Validate / Simulate / Score** (verified on 156 API responses). The single source of truth for rules. |
-| `data_layer/` | A, data | DuckDB pipeline: `raw.*` (append-only API data), `prep.*` (solver-ready features, rebuilt each run), `results.*` (every scored plan). |
-| `solver/` | C, solver | Greedy ΔS insertion + ALNS. Uses `evaluator.py` (`simulate_truck`, `score`), which must match `gruber/simulator.py`. |
+| `data_layer/` | A, data | Python package. DuckDB pipeline: `raw.*` (append-only API data), `prep.*` (solver-ready features, rebuilt each run), `results.*` (every scored plan). `load.py` = connect / list_scenarios / save_run. |
+| `solver/` | C, solver | Greedy ΔS insertion + ALNS. `instance.py` builds the in-memory `Instance` (from `prep.*` via `load_from_db()`, or from JSON); `settings.py` = run settings; `evaluator.py` must match `gruber/simulator.py`. |
+| `run_all.sh` | | One command: data layer → tests → solver. |
 | `tools/` | | `parity.py` (local vs saved API responses), `validate_fuzz.py`, `plangen.py` |
 | `tests/` | | pytest: simulator parity + solver evaluator |
 | `docs/` | | `semantics.md` (**verified API behaviour, read it before changing any rule**), challenge PDF, swagger |
@@ -23,9 +30,19 @@ python -m pytest -q tests                          # must pass before any commit
 python -m tools.parity compare                     # local simulator vs saved API responses
 python -m gruber.cli fetch                         # snapshot all scenarios (free)
 python -m gruber.cli local scenario_small plan.json   # local score, no API call
+./run_all.sh                                       # data layer -> tests -> solver (SKIP_FETCH=1 to reuse DB)
 cd data_layer && ./run_all.sh                      # fetch -> prep tables -> checks
-cd solver && python run.py <data folder> --time 300   # build -> ALNS -> compare (out/ folder)
+cd solver && python run.py                         # every scenario in the DB -> solver/out/ + results.runs
+cd solver && python run.py scenario_big --time 300 # one scenario; --source json <folder> for JSON; --no-save
 ```
+
+## Data flow
+
+`raw.*` → `prepare.sql` → `prep.*` → `instance.load_from_db()` (one read into Python lists, the
+solver never queries DuckDB while solving: a query is ~14,000× slower than a list lookup) →
+`construct` + ALNS → plans scored again by `gruber/simulator.py` → `results.runs`.
+The JSON loader stays for tests and fake scenarios (fixed data in git); `tests/test_from_prep.py`
+checks both loaders build the same problem.
 
 ## Hard rules for Claude
 
@@ -38,9 +55,13 @@ cd solver && python run.py <data folder> --time 300   # build -> ALNS -> compare
   `data/parity`, don't guess.
 - Any change to `solver/evaluator.py` or `gruber/simulator.py` must keep `pytest` and
   `tools.parity compare` at zero mismatches.
-- `solver/` stays standard-library only (optional imports allowed, behind a try/except).
+- `solver/solver.py` and `evaluator.py` stay standard-library only; duckdb is imported only inside
+  the DB loading / saving functions.
 - In SQL, every join includes `scenario_id` (ids like `C008` repeat across scenarios).
-- Work on feature branches (`solver`, `simulator`, `data-layer`, ...); don't commit to `main` directly.
+- New `prep` table → add its key to `PREP_KEYS` in `data_layer/checks.py`.
+- `data_layer` modules import each other with `try: from . import x / except ImportError: import x`
+  so they work both as a package and as scripts. Keep that pattern.
+- Work on `develop` or a feature branch off it; don't commit to `main` directly.
   Commit or push only when asked.
 
 ## Domain rules (short version; details in `docs/semantics.md`)
@@ -72,8 +93,10 @@ A server restart regenerates all scenarios: re-fetch, then `python -m tools.pari
 Custom ALNS that scores every move with the exact official score. Chosen over VROOM / OR-Tools
 because no library models the break and lateness rules or the ratio-based score exactly.
 OR-Tools may be added later only as an extra starting solution or a benchmark.
-Next steps: use `prep.*` features (truck options, similarity, impossible orders) in the solver;
-add an operator that makes room for unassigned orders.
+Next steps: use `prep.*` features in the solver, one at a time, measured in `results.runs`:
+drop order–truck pairs with `alone_fulfillable = false` (822 of 4,104 in competitive; safe, as
+`alone_*` times are lower bounds), phase-1 order by `trucks_on_time` / `planning_order`,
+rank trucks by `empty_km_to_pickup`. Then an operator that makes room for unassigned orders.
 
 ## Style
 
