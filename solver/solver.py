@@ -17,7 +17,7 @@ import random
 import time
 from dataclasses import dataclass, field
 
-from evaluator import EMPTY, Totals, TruckResult, score_value, simulate_truck
+from evaluator import EMPTY, Totals, TruckResult, score_swapped, score_value, simulate_truck
 from instance import Instance
 
 Stop = tuple[bool, int]          # (is_pickup, order_idx)
@@ -122,13 +122,20 @@ def _candidates(inst: Instance, route: list[Stop], k: int, oi: int, topk: int):
 def best_insertion(inst: Instance, sol: Solution, oi: int, k: int, topk: int) -> Insertion | None:
     """Best feasible way to put order oi into truck k, judged by exact ΔS."""
     route = sol.routes[k]
+    base = sol.res[k]
+    tot, S = sol.tot, sol.S
+    # stops after the last time-window stop cannot change value: their clock is not simulated
+    O = inst.orders
+    lt = len(route) - 1
+    while lt >= 0 and (O[route[lt][1]].ptw if route[lt][0] else O[route[lt][1]].dtw) is None:
+        lt -= 1
     best = None
     for _, a, b in _candidates(inst, route, k, oi, topk):
         new_route = route[:a] + [(True, oi)] + route[a:b] + [(False, oi)] + route[b:]
-        r = simulate_truck(inst, k, new_route, base=sol.res[k], start=a)
+        r = simulate_truck(inst, k, new_route, base=base, start=a, stop=(b if b > lt else lt) + 3)
         if not r.feasible:
             continue
-        dS = score_value(inst, sol.tot.swapped(sol.res[k], r)) - sol.S
+        dS = score_swapped(inst, tot, base, r) - S
         if best is None or dS > best.dS:
             best = Insertion(dS, k, new_route, r)
     return best
@@ -178,7 +185,7 @@ def insert_orders(inst: Instance, sol: Solution, orders: list[int], rng: random.
                 ins = cache[key]
                 if ins is None:
                     continue
-                dS = score_value(inst, sol.tot.swapped(sol.res[k], ins.res)) - sol.S
+                dS = score_swapped(inst, sol.tot, sol.res[k], ins.res) - sol.S
                 if noise:
                     dS *= 1.0 + noise * (2 * rng.random() - 1)
                 opts.append((dS, ins))
@@ -342,7 +349,7 @@ class ALNSLog:
 def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 0,
          topk: int = 3, max_trucks: int | None = 8, bank_retry: int = 8, segment: int = 50, reaction: float = 0.2,
          sigma=(33.0, 9.0, 13.0), t_start_pct: float = 0.005, t_end: float = 0.01,
-         verbose: bool = True) -> tuple[Solution, ALNSLog]:
+         verbose: bool = True, max_iters: int | None = None) -> tuple[Solution, ALNSLog]:
     """Adaptive Large Neighbourhood Search (Ropke & Pisinger 2006) on the exact score.
 
     - destroy q orders, repair with ΔS insertion (all unassigned orders are retried too)
@@ -369,7 +376,7 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
 
     while True:
         el = time.time() - t0
-        if el >= time_limit:
+        if el >= time_limit or (max_iters is not None and it >= max_iters):
             break
         it += 1
         T = T0 * (t_end / T0) ** (el / time_limit) if T0 > t_end else t_end
