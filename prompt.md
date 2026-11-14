@@ -66,7 +66,7 @@ MODE: caveman.
 ```
 ROLE: API rules auditor.
 TASK: does the API <do X> when <situation>?
-CONTEXT: check docs/semantics.md and gruber/simulator.py first.
+CONTEXT: check docs/semantics.md and simulator/simulator.py first.
 CONSTRAINTS: don't send any API call. Validate is free; Simulate/Score are limited.
 DONE WHEN: answered from verified sources, or a probe plan is ready.
 OUTPUT: answer + source (file:line). If unverified: the smallest probe plan and which call it needs.

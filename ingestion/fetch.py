@@ -25,7 +25,7 @@ import duckdb
 
 try:
     from . import config as C
-except ImportError:  # run as a script from data_layer/ (python fetch.py)
+except ImportError:  # run as a script from ingestion/ (python fetch.py)
     import config as C
 
 
@@ -279,7 +279,7 @@ def fetch_snapshot(con, only=None, force=False):
     payload = {}
     for s in scenarios:
         sid = str(pick(s, "id"))
-        folder = C.DATA_DIR / sid / snap   # same layout as gruber.loader reads
+        folder = C.DATA_DIR / sid / snap   # same layout as simulator.loader reads
         folder.mkdir(parents=True, exist_ok=True)
         trucks = get_json(C.URL_TRUCKS.format(sid=sid))
         orders = get_json(C.URL_ORDERS.format(sid=sid))

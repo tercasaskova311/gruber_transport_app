@@ -8,7 +8,7 @@ Each job is `python solver/run.py <snapshot_dir> --time T --seed S --config C --
 at most --cores at once (default: CPU count - 2). Nothing else heavy should run meanwhile:
 the solver is time-limited, so a busy machine means fewer iterations and a lower score.
 
-The final plan of every job is scored with gruber.simulator (the exact copy of the API);
+The final plan of every job is scored with simulator.simulator (the exact copy of the API);
 any rule violation aborts the benchmark. One row per job is appended to
 experiments/results.csv. Plans and logs go to out/bench/ (git-ignored).
 

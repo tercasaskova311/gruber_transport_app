@@ -13,7 +13,7 @@ Outputs in settings.OUT_DIR/<scenario_id>/ (DB) or <scenario_dir>/out/ (JSON), o
     compare.md          compare.json          (initial vs optimized)
     history.csv         operators.json        (convergence + ALNS operator stats, for the app)
     result.json                               (score, config, timings: read by tools/bench.py)
-With the DB source, both plans are also scored by the verified simulator (gruber) and
+With the DB source, both plans are also scored by the verified simulator (simulator/simulator.py) and
 stored in results.* (turn off with --no-save).
 """
 from __future__ import annotations

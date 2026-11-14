@@ -1,8 +1,8 @@
 """Command line entry point.
 
-  python -m gruber.cli validate <scenario> <plan.json>   # free API Validate + local check
-  python -m gruber.cli local <scenario> <plan.json>      # local simulate + score only
-  python -m gruber.cli submit <scenario> <plan.json> [--snapshot <dir>] [--dry-run] [--i-am-sure]
+  python -m simulator.cli validate <scenario> <plan.json>   # free API Validate + local check
+  python -m simulator.cli local <scenario> <plan.json>      # local simulate + score only
+  python -m simulator.cli submit <scenario> <plan.json> [--snapshot <dir>] [--dry-run] [--i-am-sure]
                                                 # all free checks, then ONE Score call after y/N
 """
 from __future__ import annotations
@@ -40,7 +40,7 @@ def cmd_validate(a):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="gruber")
+    ap = argparse.ArgumentParser(prog="simulator")
     sp = ap.add_subparsers(dest="cmd", required=True)
     for name in ("local", "validate"):
         p = sp.add_parser(name); p.add_argument("scenario"); p.add_argument("plan")

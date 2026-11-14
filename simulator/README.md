@@ -1,4 +1,4 @@
-# `gruber` — API client, data loader and exact local simulator
+# `simulator` — API client, data loader and exact local simulator
 
 This package is the shared base for every solver. It can:
 
@@ -38,7 +38,7 @@ The scenario endpoints are public; the key is only needed for Validate / Simulat
 ## Using it from code
 
 ```python
-from gruber import loader, simulator
+from simulator import loader, simulator
 
 sc = loader.load("scenario_small")        # latest snapshot; or load(sid, "20261113_192945")
 
@@ -71,13 +71,13 @@ regenerates all scenarios on restart).
 ## Command line
 
 ```powershell
-python -m gruber.cli local scenario_small plan.json     # local score, no API call
-python -m gruber.cli validate scenario_small plan.json  # API Validate (free) vs local check
+python -m simulator.cli local scenario_small plan.json     # local score, no API call
+python -m simulator.cli validate scenario_small plan.json  # API Validate (free) vs local check
 ```
 
 ## Submitting a plan
 
-`python -m gruber.cli submit <scenario> <plan.json> [--snapshot <dir>] [--dry-run] [--i-am-sure]`
+`python -m simulator.cli submit <scenario> <plan.json> [--snapshot <dir>] [--dry-run] [--i-am-sure]`
 runs, in order: (1) re-download the scenario and compare it with the snapshot the plan was built on
 (if it differs, the fresh data is saved as a new snapshot and the command stops), (2) exact local score,
 zero violations required, (3) free API Validate, (4) Score calls recorded in `out/submissions/log.csv`,
@@ -124,6 +124,6 @@ python -m tools.parity compare            # saved API responses vs local simulat
 python -m tools.validate_fuzz 20          # random plans vs API Validate (free)
 ```
 
-After a server restart (new data): `cd data_layer && ./run_all.sh`, then `python -m tools.parity build`, and
+After a server restart (new data): `cd ingestion && ./run_all.sh`, then `python -m tools.parity build`, and
 re-run parity with `python -m tools.parity send <scenario>` (asks y/n, uses Simulate/Score
 calls; never on competitive).

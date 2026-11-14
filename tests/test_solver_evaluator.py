@@ -1,4 +1,4 @@
-"""solver/evaluator.py must agree with the exact simulator (gruber/simulator.py, which
+"""solver/evaluator.py must agree with the exact simulator (simulator/simulator.py, which
 matches the API on all saved parity responses).
 
 Checked per truck on random valid routes from the saved snapshots: km, loaded km, cost,

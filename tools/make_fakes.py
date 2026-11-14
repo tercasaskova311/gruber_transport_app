@@ -3,7 +3,7 @@
   python -m tools.make_fakes
 
 Runs solver/make_fake_scenario.py (fixed seeds) and rewrites orders.json into the real API
-format (pickup_window / delivery_window / value) so gruber.loader and the exact simulator read
+format (pickup_window / delivery_window / value) so simulator.loader and the exact simulator read
 them like a real snapshot. Result: data/fake/<name>/. The folders are committed, so every
 branch is measured on exactly the same data; re-run only to add new ones.
 """

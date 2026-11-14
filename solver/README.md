@@ -20,7 +20,7 @@ python run.py ../data/scenario_big/<ts> --source json            # a JSON folder
 
 With the DB source, data comes from `instance.load_from_db()`, which builds the same `Instance` as
 the JSON loader (checked by `tests/test_from_prep.py`). Both plans are then scored by the verified
-simulator (`gruber/simulator.py`) and stored in `results.runs` (`--no-save` to skip).
+simulator (`simulator/simulator.py`) and stored in `results.runs` (`--no-save` to skip).
 
 Outputs in `out/<scenario_id>/` (DB) or `<folder>/out/` (JSON):
 
@@ -55,7 +55,7 @@ No dependencies beyond the Python 3.10+ standard library.
 ## Time rules (verified against the API)
 
 `evaluator.py` follows the API's behaviour as established in `docs/semantics.md`
-(156 Simulate/Score responses reproduced exactly by `gruber/simulator.py`):
+(156 Simulate/Score responses reproduced exactly by `simulator/simulator.py`):
 
 - driving minutes = `ceil(km * 60 / 70)` per leg; a break or rest can interrupt a leg;
 - time spent standing still (waiting + service, summed over consecutive stops in the same city)
@@ -65,7 +65,7 @@ No dependencies beyond the Python 3.10+ standard library.
 
 The API's time windows are `pickup_window` / `delivery_window` = `{"from", "to"}` in minutes or `null`.
 
-`tests/test_solver_evaluator.py` checks `simulate_truck` against `gruber.simulator` on random
+`tests/test_solver_evaluator.py` checks `simulate_truck` against `simulator.simulator` on random
 routes from the saved snapshots (km, cost, CO2, finish time, driving, breaks, value) and checks
 that resuming from a saved state equals a full simulation. Run `python -m pytest -q tests`.
 

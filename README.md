@@ -59,7 +59,7 @@ Only after step 3 worked, and after:
 - `local` and `validate` on `out/submit/plan_competitive.json` show **0 violations** and **True / True**;
 - the plan comes from the newest solver run (re-run step 2 after solving);
 - if Validate complains about unknown orders or trucks, the server data changed: re-fetch
-  (`cd inference && ./run_all.sh`), solve again, then come back.
+  (`cd ingestion && ./run_all.sh`), solve again, then come back.
 
 ```bash
 python3 -c "

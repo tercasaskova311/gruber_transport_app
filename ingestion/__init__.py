@@ -1,1 +1,1 @@
-"""data_layer: API -> DuckDB (raw.*, prep.*, results.*). Use as `from data_layer import load`."""
+"""ingestion: API -> DuckDB (raw.*, prep.*, results.*). Use as `from ingestion import load`."""

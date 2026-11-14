@@ -1,6 +1,6 @@
 """Guarded submission: every check that can be done for free runs before the one Score call.
 
-  python -m gruber.cli submit <scenario> <plan.json> [--snapshot <dir>] [--dry-run] [--i-am-sure]
+  python -m simulator.cli submit <scenario> <plan.json> [--snapshot <dir>] [--dry-run] [--i-am-sure]
 
 Steps, in this order; the first failed step stops the command with a non-zero exit code:
   1. fresh-data check   download the scenario again and compare it with the snapshot the plan
@@ -287,7 +287,7 @@ def run(scenario: str, plan_path, snapshot: str | None = None, dry_run: bool = F
     if differ:
         _banner("API SCORE AND LOCAL SCORE DIFFER.\nThe simulator or the data is out of sync with the server. "
                 "Do not trust further local scores\nuntil this is explained (compare the saved response "
-                "with `python -m gruber.cli local`).")
+                "with `python -m simulator.cli local`).")
     else:
         print(f"      API score = local score = {resp.get('score')}: simulator and data are in sync.")
     return OK

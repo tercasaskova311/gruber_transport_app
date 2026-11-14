@@ -172,7 +172,7 @@ ROLE_PRESETS = {
 #    distance_matrix.json, plus one or more plan files named plan*.json.
 # =============================================================================
 HERE = Path(__file__).resolve().parent
-# The team's DuckDB (built by data_layer/run_all.sh, plans added by solver/run.py).
+# The team's DuckDB (built by ingestion/run_all.sh, plans added by solver/run.py).
 # Scenarios come from raw.cur_* (the API JSON as fetched), plans from results.runs.
 DB_PATH = HERE.parent / "data" / "hackathon.duckdb"
 MAX_RUNS = 40                                 # plans listed per scenario, best score first
@@ -230,7 +230,7 @@ def load_scenario(scenario):
             dist.setdefault(a, {})[b] = int(km) if km == int(km) else km
         cities, trucks, orders = objs("cities"), objs("trucks"), objs("orders")
     if not cities:
-        raise FileNotFoundError(f"{scenario} has no data in {DB_PATH.name}; run data_layer/run_all.sh")
+        raise FileNotFoundError(f"{scenario} has no data in {DB_PATH.name}; run ingestion/run_all.sh")
     return {
         "cities": {c["id"]: c for c in cities},
         "trucks": {t["id"]: t for t in trucks},

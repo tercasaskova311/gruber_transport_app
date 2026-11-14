@@ -10,7 +10,7 @@ try:
     from . import checks
     from . import config as C
     from .fetch import init_schema, log
-except ImportError:  # run as a script from data_layer/ (python prepare.py)
+except ImportError:  # run as a script from ingestion/ (python prepare.py)
     import checks
     import config as C
     from fetch import init_schema, log

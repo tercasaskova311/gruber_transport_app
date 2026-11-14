@@ -5,5 +5,6 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 PY="${PYTHON:-python3}"
+export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"   # Windows consoles: tables print box characters
 "$PY" fetch.py --no-prepare "$@"
 "$PY" prepare.py

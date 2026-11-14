@@ -4,7 +4,7 @@
                             [--cores N] [--out DIR] [--log]
 
 Each run is `solver/run.py <snapshot_dir> --config C --seed S --time T`. Every final plan is
-scored with the exact simulator (gruber.simulator); a plan with a rule violation aborts. The
+scored with the exact simulator (simulator.simulator); a plan with a rule violation aborts. The
 plan with the highest exact score is copied to <out>/best_plan.json, with a table of all runs
 in <out>/summary.json. No API call is made here: Validate / Score are separate, manual steps.
 

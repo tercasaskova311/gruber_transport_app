@@ -1,4 +1,4 @@
-"""gruber/submit.py with the API client replaced by a fake: no real Score or Simulate call is made."""
+"""simulator/submit.py with the API client replaced by a fake: no real Score or Simulate call is made."""
 import copy
 import csv
 import json
