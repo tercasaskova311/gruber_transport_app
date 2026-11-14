@@ -1,20 +1,20 @@
 # Data layer: what's in the database and how to use it
 
-Everything lives in one DuckDB file, `data_layer/data/hackathon.duckdb`. The file is git-ignored, so each person builds their own copy (see **Quick start**).
+Everything lives in one DuckDB file, `data/hackathon.duckdb` (repo root). The file is git-ignored, so each person builds their own copy (see **Quick start**).
 You can open it from Python, the DuckDB CLI (`duckdb data/hackathon.duckdb`), DBeaver, or the DuckDB UI.
 
 ## Quick start
 
 ```bash
 cd data_layer
-pip install -r requirements.txt     # duckdb, numpy
+pip install -r ../requirements.txt  # from the repo root file
 ./run_all.sh                        # fetch API -> build prep tables -> run checks
 ```
 
 * Run it again any time. It only stores a new snapshot if the API data changed. Use `./run_all.sh --force` to store one anyway.
 * **SSL error on macOS** (`CERTIFICATE_VERIFY_FAILED`): run `open "/Applications/Python 3.12/Install Certificates.command"` once.
 * **`python: command not found`**: the script uses `python3`. To pick another interpreter, use `PYTHON=.venv/bin/python ./run_all.sh`.
-* **Upgrading from the old flat layout** (tables without `raw.`/`prep.`): delete `data/hackathon.duckdb` and run `./run_all.sh --force`.
+* **Upgrading from the old flat layout** (tables without `raw.`/`prep.`): delete `../data/hackathon.duckdb` and run `./run_all.sh --force`.
 
 ## 1. The big picture: three schemas
 

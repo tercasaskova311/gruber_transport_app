@@ -21,7 +21,8 @@ HTTP_TIMEOUT_S = 30
 HTTP_RETRIES = 4          # attempts per request, with exponential backoff
 
 # --- Storage ---------------------------------------------------------------
-DATA_DIR = Path(os.environ.get("DATA_DIR", HERE / "data"))
+# data/ at the repo root: hackathon.duckdb + snapshots data/<scenario>/<snapshot_id>/
+DATA_DIR = Path(os.environ.get("DATA_DIR", HERE.parent / "data"))
 DB_PATH = Path(os.environ.get("DB_PATH", DATA_DIR / "hackathon.duckdb"))
 
 # --- Problem rules (keep in sync with prepare.sql macros) -------------------

@@ -215,6 +215,14 @@ def parse_distance_csv(text):
     return out
 
 
+def distance_dict(text):
+    """Wide CSV -> {from: {to: km}}, the shape of GET /DistanceMatrix (whole km stay ints)."""
+    out = {}
+    for frm, to, km in parse_distance_csv(text):
+        out.setdefault(frm, {})[to] = int(km) if km is not None and km == int(km) else km
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Snapshot logic
 # ---------------------------------------------------------------------------
@@ -271,7 +279,7 @@ def fetch_snapshot(con, only=None, force=False):
     payload = {}
     for s in scenarios:
         sid = str(pick(s, "id"))
-        folder = C.DATA_DIR / snap / sid
+        folder = C.DATA_DIR / sid / snap   # same layout as gruber.loader reads
         folder.mkdir(parents=True, exist_ok=True)
         trucks = get_json(C.URL_TRUCKS.format(sid=sid))
         orders = get_json(C.URL_ORDERS.format(sid=sid))
@@ -279,9 +287,10 @@ def fetch_snapshot(con, only=None, force=False):
         for name, obj in (("scenario", s), ("cities", cities[sid]), ("trucks", trucks), ("orders", orders)):
             (folder / f"{name}.json").write_text(json.dumps(obj, indent=1))
         (folder / "distances.csv").write_text(dist_csv)
+        (folder / "distance_matrix.json").write_text(json.dumps(distance_dict(dist_csv)))  # for the JSON loaders
         payload[sid] = (s, cities[sid], trucks, orders, dist_csv, folder)
         log(f"  scenario {sid}: {len(cities[sid])} cities, {len(trucks)} trucks, {len(orders)} orders")
-    (C.DATA_DIR / snap / "scenarios.json").write_text(json.dumps(scenarios, indent=1))
+    (C.DATA_DIR / f"scenarios_{snap}.json").write_text(json.dumps(scenarios, indent=1))
 
     # 2) write all rows in ONE transaction; snapshots row goes in last
     con.execute("BEGIN")
