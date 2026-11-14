@@ -1,0 +1,30 @@
+[
+ {
+  "id": "scenario_small",
+  "name": "Small",
+  "cities_count": 10,
+  "trucks_count": 4,
+  "orders_count": 20
+ },
+ {
+  "id": "scenario_middle",
+  "name": "Middle",
+  "cities_count": 20,
+  "trucks_count": 8,
+  "orders_count": 50
+ },
+ {
+  "id": "scenario_big",
+  "name": "Big",
+  "cities_count": 30,
+  "trucks_count": 15,
+  "orders_count": 120
+ },
+ {
+  "id": "scenario_competitive",
+  "name": "Competitive",
+  "cities_count": 45,
+  "trucks_count": 25,
+  "orders_count": 200
+ }
+]

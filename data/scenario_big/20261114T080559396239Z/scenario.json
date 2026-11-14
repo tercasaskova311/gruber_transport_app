@@ -1,0 +1,7 @@
+{
+ "id": "scenario_big",
+ "name": "Big",
+ "cities_count": 30,
+ "trucks_count": 15,
+ "orders_count": 120
+}
