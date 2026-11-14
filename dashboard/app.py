@@ -21,6 +21,10 @@ import streamlit as st
 from folium.plugins import PolyLineTextPath
 from streamlit_folium import st_folium
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import roads                                    # noqa: E402  real road shapes for the map (cached file)
+
 
 # =============================================================================
 # 1. DESIGN TOKENS
@@ -28,8 +32,9 @@ from streamlit_folium import st_folium
 #    palette, so both themes share exactly the same layout, type and components.
 # =============================================================================
 BRAND_NAME = "Logi-Wise"
-# OpenStreetMap's own tiles (no API key), turned grey with a CSS filter so the routes stand out.
-MAP_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+# OpenStreetMap's own classic tiles (no API key needed).
+MAP_CREDIT = ('&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · '
+              'roads: <a href="https://project-osrm.org">OSRM</a>')
 _OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 
 THEMES = {
@@ -37,6 +42,7 @@ THEMES = {
     "light": dict(
         TEXT="#272B33", MUTED="#5E6575", FAINT="#8C92A1",
         ACCENT="#22A08C", AQUA="#8FE3C8", MAUVE="#D3AFC6", RED="#E1203B",
+        ROUTE="#2563EB", TRUCK_BG="#1D4ED8", GREEN="#16A34A", STOP_HOLLOW="#FFFFFF",
         PRISM="conic-gradient(from 200deg, #8FE3C8, #B9DCF4, #CBB9F2, #EDC3DC, #F7E7CB, #8FE3C8)",
         SPECTRAL="linear-gradient(100deg, #1F9E8A 0%, #4F8FDF 48%, #A56BC8 100%)",
         TRUCK_COLOURS=["#2F8FDB", "#8A63E8", "#13A386", "#EE6A4C", "#C64FA8",
@@ -70,19 +76,21 @@ THEMES = {
         BTN_SHADOW="0 6px 16px rgba(34,160,140,0.32)", BTN_SECONDARY_BG="rgba(255,255,255,0.55)",
         ORB_RING="rgba(255,255,255,0.9)", LOGO_GLOW="rgba(120,110,190,0.30)",
         # map
+        FLOAT_BG="rgba(248,250,252,0.93)",
         MAP_TILES=_OSM_TILES, MAP_BG="#EEF1F2",
-        MAP_TINT="grayscale(1) brightness(1.04) contrast(0.88)",
+        MAP_TINT="none",                                # classic OpenStreetMap colours
         MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(255,255,255,0.82)", MAP_CONTROL_LINE="rgba(39,43,51,0.08)",
         TOOLTIP_BG="#FFFFFF",
         CITY_FILL="#5E6680", CITY_RING="#FFFFFF", LABEL_TEXT="#2E333D", LABEL_HALO="#FFFFFF",
-        CASING="#FFFFFF", CASING_OPACITY=0.95, GLOW_SELECTED=0.24, GLOW=0.17, FADED=0.16,
+        CASING="#FFFFFF", CASING_OPACITY=0.95, GLOW_SELECTED=0.24, GLOW=0.17, FADED=0.10,
         PILL_TEXT="#FFFFFF", MARKER_RING="rgba(255,255,255,0.9)",
     ),
     # ---------------- Midnight Prism: deep plum · amethyst · aqua ----------------
     "dark": dict(
         TEXT="#F2EEF8", MUTED="#B9B0D0", FAINT="#8E85A8",
         ACCENT="#5FD6BE", AQUA="#8FE3C8", MAUVE="#C99BC0", RED="#FF4D6A",
+        ROUTE="#60A5FA", TRUCK_BG="#3B82F6", GREEN="#4ADE80", STOP_HOLLOW="#1B1530",
         PRISM="conic-gradient(from 200deg, #7FD9C0, #8FB8F0, #B49BF0, #E0A8CF, #E9D2B8, #7FD9C0)",
         SPECTRAL="linear-gradient(100deg, #6FE3C9 0%, #9DB8FF 50%, #D6A3E8 100%)",
         TRUCK_COLOURS=["#5CB4F5", "#A98BFF", "#3FD3AE", "#FF8C6E", "#E77CCB",
@@ -117,13 +125,14 @@ THEMES = {
         BTN_SHADOW="0 6px 18px rgba(95,214,190,0.28)", BTN_SECONDARY_BG="rgba(255,255,255,0.08)",
         ORB_RING="rgba(255,255,255,0.35)", LOGO_GLOW="rgba(150,118,232,0.45)",
         # map
+        FLOAT_BG="rgba(38,31,60,0.94)",
         MAP_TILES=_OSM_TILES, MAP_BG="#1E1830",
-        MAP_TINT="grayscale(1) invert(1) brightness(0.85) contrast(0.9) sepia(0.25) hue-rotate(210deg)",
+        MAP_TINT="brightness(0.72) contrast(1.08) saturate(0.85)",   # classic map, dimmed for dark mode
         MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(52,43,74,0.88)", MAP_CONTROL_LINE="rgba(255,255,255,0.10)",
         TOOLTIP_BG="#2C2442",
         CITY_FILL="#CFC6EC", CITY_RING="#211B35", LABEL_TEXT="#EDE8F7", LABEL_HALO="#1B1530",
-        CASING="#1B1530", CASING_OPACITY=0.85, GLOW_SELECTED=0.34, GLOW=0.24, FADED=0.22,
+        CASING="#1B1530", CASING_OPACITY=0.85, GLOW_SELECTED=0.34, GLOW=0.24, FADED=0.16,
         PILL_TEXT="#16122A", MARKER_RING="rgba(27,21,48,0.9)",
     ),
 }
@@ -140,14 +149,14 @@ apply_theme("light")                                  # Light Prism is the defau
 
 # Layout: the map is the whole background; header bar, side panel and legend float on it.
 DOCK_WIDTH = 384           # the side panel floating on the right of the map
-TOP_H = 96                 # height of the floating header bar plus its margins
+TOP_H = 112                # height of the floating header bar plus its margins
 INSET = 16                 # every floating element sits this far from the screen edge
 R_PANEL = 22               # corner radius: panels (number strip, side panel, map)
 R_INNER = 14               # corner radius: anything inside a panel (inputs, rows, buttons)
 
 # What each role sees. Each role gets its own screen, not the same screen with a different label.
 ROLE_PRESETS = {
-    "Dispatcher": ["Fleet numbers", "Map", "Fleet table", "Truck details", "Stops", "Orders not in plan"],
+    "Dispatcher": ["Map", "Fleet table", "Truck details", "Stops", "Orders not in plan"],
     "Manager":    ["Fleet numbers", "Fleet table", "Truck details", "Orders not in plan"],   # numbers, no map
     "Driver":     ["Map", "Truck details", "Stops"],                                           # one truck only
 }
@@ -167,6 +176,7 @@ HERE = Path(__file__).resolve().parent
 # Scenarios come from raw.cur_* (the API JSON as fetched), plans from results.runs.
 DB_PATH = HERE.parent / "data" / "hackathon.duckdb"
 MAX_RUNS = 40                                 # plans listed per scenario, best score first
+SCENARIO = "scenario_competitive"             # the one scenario we plan for from now on
 
 
 def _db():
@@ -451,15 +461,18 @@ def inject_css():
       .chip .dot {{ width: 8px; height: 8px; border-radius: 50%; flex: none; }}
 
       /* Role switch: one glass capsule, the active role lit from inside */
-      .st-key-role [data-testid="stButtonGroup"] {{ display: flex; justify-content: flex-end; }}
-      .st-key-role [role="radiogroup"] {{ display: inline-flex; flex-wrap: nowrap; gap: 2px; padding: 4px;
+      .st-key-role [data-testid="stButtonGroup"], .st-key-dock_tab [data-testid="stButtonGroup"] {{ display: flex; justify-content: flex-end; }}
+      .st-key-role [role="radiogroup"], .st-key-dock_tab [role="radiogroup"] {{ display: inline-flex; flex-wrap: nowrap; gap: 2px; padding: 4px;
                                           border-radius: 999px; }}
-      .st-key-role button {{ border: none !important; background: transparent !important; box-shadow: none !important;
+      .st-key-role button, .st-key-dock_tab button {{ border: none !important; background: transparent !important; box-shadow: none !important;
                              border-radius: 999px !important; padding: 6px 16px !important; min-height: 0 !important;
                              color: {MUTED} !important; font-weight: 600; transition: background .2s ease, box-shadow .2s ease; }}
-      .st-key-role button p {{ font-size: 0.84rem !important; color: inherit !important; }}
-      .st-key-role button[aria-checked="true"] {{ color: {TEXT} !important; background: {SEG_ON_BG} !important;
+      .st-key-role button p, .st-key-dock_tab button p {{ font-size: 0.84rem !important; color: inherit !important; }}
+      .st-key-role button[aria-checked="true"], .st-key-dock_tab button[aria-checked="true"] {{ color: {TEXT} !important; background: {SEG_ON_BG} !important;
                                                   box-shadow: {SEG_ON_SHADOW} !important; }}
+
+      .st-key-dock_tab [data-testid="stButtonGroup"] {{ justify-content: flex-start; }}
+      .st-key-dock_tab [role="radiogroup"] {{ background: {INPUT_BG}; box-shadow: none; }}
 
       /* Theme toggle: one round glass button with a sun or moon */
       .st-key-theme_toggle {{ display: flex; justify-content: flex-end; }}
@@ -476,6 +489,9 @@ def inject_css():
       .st-key-legend_slot {{ position: fixed !important; left: {INSET}px; bottom: {INSET}px; z-index: 6;
                              max-width: calc(100vw - {DOCK_WIDTH + 3 * INSET}px); }}
       .st-key-ribbon_slot, .st-key-ribbon_static {{ margin-bottom: 4px; }}
+      /* Over the map the panels are nearly solid: Safari can't blur an iframe behind glass */
+      .st-key-dock, .st-key-legend_slot .legend,
+      body:has(.st-key-mapbox) .st-key-topbar {{ background: {FLOAT_BG} !important; }}
 
       /* ---------- Number strip: label / value / caption on three shared lines ---------- */
       .ribbon {{ width: 100%; display: flex; flex-wrap: wrap; row-gap: 12px; padding: 14px 6px;
@@ -550,6 +566,8 @@ def inject_css():
       .grid3 > div {{ padding-left: 12px; border-left: 1px solid {HAIR}; min-width: 0; }}
       .grid3 > div:nth-child(3n+1) {{ padding-left: 0; border-left: none; }}
       .grid3 .vm {{ margin-top: 3px; }}
+      .score-text {{ background: {SPECTRAL}; -webkit-background-clip: text; background-clip: text; color: transparent;
+                     font-size: 1.2rem; }}
 
       /* Stop timeline: the line runs exactly through the marker centres (marker 22px, centre at 19px) */
       .timeline {{ position: relative; }}
@@ -603,7 +621,18 @@ def html(markup):
 
 
 def truck_colours(data):
-    return {tid: TRUCK_COLOURS[i % len(TRUCK_COLOURS)] for i, tid in enumerate(sorted(data["trucks"]))}
+    """Every truck uses the one route colour, so the panel matches the map."""
+    return {tid: ROUTE for tid in data["trucks"]}
+
+
+def truck_svg(size=22):
+    """A plain truck (side view, cab on the right) in the truck blue, with a thin white outline
+    so it stays visible on any part of the map. No frame around it."""
+    return (f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" style="overflow:visible">'
+            f'<g fill="{TRUCK_BG}" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" paint-order="stroke">'
+            f'<path d="M1.5 5.5h12.5v10.5H1.5z"/><path d="M14 8.5h4.6l3.9 4.1V16H14z"/>'
+            f'<circle cx="6" cy="17.6" r="2.3"/><circle cx="18" cy="17.6" r="2.3"/></g>'
+            f'<path d="M15.6 10h2.5l2.2 2.4h-4.7z" fill="#fff" opacity="0.85"/></svg>')
 
 
 def compact(n):
@@ -624,14 +653,12 @@ def brand_html():
 
 
 def chips_html(problems, official):
-    """One status chip: is the plan clean? (Each official violation costs 20 points.)"""
+    """A red warning chip, shown ONLY when the plan breaks a rule (each violation costs 20 points).
+    A valid plan (the normal case) shows nothing."""
     bad = official["violations"] if official else len(problems)
-    colour = RED if bad else ACCENT
-    text = f"{bad} violation{'s' if bad != 1 else ''}" if bad else "0 violations"
-    tip = ("Each violation costs 20 points." if bad else
-           "Capacity, truck types, time windows and driving breaks all respected.")
-    html(f'<div class="chips"><span class="chip lg" title="{tip}">'
-         f'<span class="dot" style="background:{colour}"></span>{text}</span></div>')
+    if bad:
+        html(f'<div class="chips"><span class="chip lg" title="Each violation costs 20 points.">'
+             f'<span class="dot" style="background:{RED}"></span>{bad} violation{"s" if bad != 1 else ""}</span></div>')
 
 
 def ribbon_html(data, analysis, not_in_plan, official=None, baseline=None):
@@ -654,7 +681,7 @@ def ribbon_html(data, analysis, not_in_plan, official=None, baseline=None):
                       f'<div class="cap">{score_cap}</div></div>')
         missed = official["total"] - official["fulfilled"]
         orders_cell = cell("Orders delivered", f'{official["fulfilled"]}<span class="unit">/ {official["total"]}</span>',
-                           f'{official["late"]} late · {missed} not served', "On time or up to 60 min late")
+                           f'{official["late"]} late · {missed} unserved', "On time or up to 60 min late")
     else:
         score_cell = ('<div class="cell"><div class="ov">Score</div><div class="score">—</div>'
                       '<div class="cap">not scored yet</div></div>')
@@ -667,6 +694,25 @@ def ribbon_html(data, analysis, not_in_plan, official=None, baseline=None):
          + cell("Cost", f"€{cost:,.0f}", "est. from €/km", "km × each truck's €/km")
          + cell("CO₂", f'{co2 / 1000:,.1f}<span class="unit">t</span>', "est. from CO₂/km", "km × each truck's CO₂/km")
          + "</div>")
+
+
+def summary_html(data, analysis, official, baseline=None):
+    """Dispatcher: the three numbers that matter, at the top of the side panel."""
+    total_km = sum(t["km"] for t in analysis.values())
+    empty_km = total_km - sum(t["loaded_km"] for t in analysis.values())
+    cell = lambda k, v, c, cls="vm": (f'<div><div class="ov">{k}</div><div class="{cls}">{v}</div>'
+                                      f'<div class="cap">{c}</div></div>')
+    if official:
+        gain = official["score"] - baseline if baseline is not None else None
+        score_cap = f"+{gain:.1f} vs greedy" if gain is not None and gain >= 0.05 else "of 1,000"
+        score = cell("Score", f'{official["score"]:.1f}', score_cap, "vm score-text")
+        orders = cell("Delivered", f'{official["fulfilled"]}<span class="unit">/ {official["total"]}</span>',
+                      f'{official["late"]} late')
+    else:
+        score = cell("Score", "—", "not scored", "vm score-text")
+        orders = cell("Planned", f'{len(data["orders"])}', "&nbsp;")
+    html('<div class="grid3">' + score + orders
+         + cell("Empty km", f'{empty_km:,}<span class="unit">km</span>', f"of {total_km:,} km") + "</div>")
 
 
 def dock_head_html(title, meta):
@@ -731,8 +777,9 @@ def not_served_html(data, not_in_plan):
                  f'{escape(cities[o["delivery_city"]]["name"])}</span></div>'
                  f'<div class="cap">{" · ".join(escape(f) for f in facts)}</div></div>'
                  f'<div class="side"><div class="cap">value {o.get("value", 1):g}</div></div></div>')
-    html(f'<div class="section-head"><span class="ov" style="color:{RED}">Not served</span>'
+    html(f'<div class="section-head"><span class="ov" style="color:{RED}">Unserved orders</span>'
          f'<span class="cap">{len(not_in_plan)} order{"s" if len(not_in_plan) != 1 else ""}</span></div>'
+         f'<div class="cap" style="margin:-2px 0 6px">On the map: red dot = pickup, dotted line to the white-red ring = delivery.</div>'
          f'<div class="list unserved">{rows}</div>')
 
 
@@ -799,22 +846,21 @@ def next_up_html(data, analysis, tid, done):
 
 
 def legend_html(show_unplanned=True, show_here=False):
-    solid = f'<svg width="28" height="8"><line x1="1" y1="4" x2="27" y2="4" stroke="{MUTED}" stroke-width="3" stroke-linecap="round"/></svg>'
-    dashed = f'<svg width="28" height="8"><line x1="1" y1="4" x2="27" y2="4" stroke="{MUTED}" stroke-width="3" stroke-dasharray="5 5"/></svg>'
-    city = (f'<svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="{CITY_FILL}" fill-opacity="0.55" '
-            f'stroke="{CITY_RING}" stroke-width="1.5"/></svg>')
-    ring = f'<svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="none" stroke="{RED}" stroke-width="2"/></svg>'
-    here = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5" fill="{TEXT}" stroke="{ACCENT}" stroke-width="3"/></svg>'
-    html(f'<div class="legend lg"><span>{solid} With cargo</span><span>{dashed} Empty</span>'
-         f'<span>{city} City (bigger = more orders)</span>'
-         + (f'<span>{ring} Order not served</span>' if show_unplanned else "")
-         + (f'<span>{here} You are here</span>' if show_here else "") + "</div>")
+    solid = f'<svg width="28" height="8"><line x1="1" y1="4" x2="27" y2="4" stroke="{ROUTE}" stroke-width="4" stroke-linecap="round"/></svg>'
+    dashed = f'<svg width="28" height="8"><line x1="1" y1="4" x2="27" y2="4" stroke="{ROUTE}" stroke-width="4" stroke-dasharray="6 5"/></svg>'
+    todo = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5.5" fill="{STOP_HOLLOW}" stroke="{GREEN}" stroke-width="3"/></svg>'
+    done = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5.5" fill="{GREEN}" stroke="{GREEN}" stroke-width="3"/></svg>'
+    red = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5.5" fill="{RED}" stroke="#fff" stroke-width="2"/></svg>'
+    truck = truck_svg(20)
+    html(f'<div class="legend lg"><span>{truck} Truck</span><span>{solid} With cargo</span><span>{dashed} Empty</span>'
+         f'<span>{todo} Stop to do</span>' + (f'<span>{done} Stop done</span>' if show_here else "")
+         + (f'<span>{red} Unserved order</span>' if show_unplanned else "") + "</div>")
 
 
 # =============================================================================
 # 5. THE MAP
-#    Quiet CARTO basemap (OpenStreetMap data, few labels) so the routes stand out;
-#    white casing and a soft glow under every route.
+#    Classic OpenStreetMap; one route colour; trucks = blue squares, stops = green dots,
+#    unserved orders = red dots.
 # =============================================================================
 def map_css():
     return f"""<style>
@@ -822,10 +868,18 @@ def map_css():
   html, body {{ height: 100%; margin: 0; }}
   .folium-map, .leaflet-container {{ height: 100vh !important; background: {MAP_BG} !important;
                                      font-family: Manrope, sans-serif; }}
-  .leaflet-tile-pane {{ filter: {MAP_TINT}; }}
+  .leaflet-tile-pane img.leaflet-tile {{ filter: {MAP_TINT}; }}
   .leaflet-container::after {{ content: ""; position: absolute; inset: 0; z-index: 350; pointer-events: none;
                                background: {MAP_SHEEN}; }}
-  .leaflet-top.leaflet-left {{ top: 50%; transform: translateY(-50%); }}
+  .leaflet-top.leaflet-left {{ top: auto; left: auto; bottom: 34px; right: {DOCK_WIDTH + 2 * INSET}px; }}
+  .leaflet-top.leaflet-left .leaflet-control {{ margin: 0; }}
+  .leaflet-bottom.leaflet-left {{ bottom: 62px; left: {INSET}px; }}
+  .leaflet-control-scale {{ margin: 0 !important; }}
+  .leaflet-control-scale-line {{ background: {MAP_CONTROL_BG}; border-color: {MUTED}; color: {TEXT};
+                                 font: 600 11px Manrope, sans-serif; }}
+  .leaflet-control-scale-line:not(:first-child) {{ display: none; }}   /* km only, no miles */
+  .leaflet-interactive:focus, .leaflet-marker-icon:focus, path:focus, .leaflet-container:focus {{ outline: none !important; }}
+  .leaflet-bottom.leaflet-right {{ right: {DOCK_WIDTH + 2 * INSET}px; }}   /* credit stays visible next to the side panel */
   .leaflet-bar {{ border: none !important; border-radius: 14px !important; overflow: hidden;
                   box-shadow: {EDGE}, 0 6px 18px rgba(20,16,40,0.22) !important; }}
   .leaflet-bar a {{ background: {MAP_CONTROL_BG} !important; color: {TEXT} !important;
@@ -862,15 +916,17 @@ def curve_points(a, b, bend, steps=24):
 
 
 def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
-              only_selected=False, done_stops=None, here_city=None):
-    cities, colours = data["cities"], truck_colours(data)
-    truck_number = {tid: i for i, tid in enumerate(sorted(data["trucks"]))}
+              only_selected=False, done_stops=None, here_city=None, unserved_lines=False):
+    cities = data["cities"]
     point = lambda cid: [cities[cid]["latitude"], cities[cid]["longitude"]]
 
     lats = [c["latitude"] for c in cities.values()]
     lons = [c["longitude"] for c in cities.values()]
+    # Scale bar (distances matter here); zoom and panning kept to the scenario's part of the world
     m = folium.Map(location=[sum(lats) / len(lats), sum(lons) / len(lons)], zoom_start=5,
-                   tiles=MAP_TILES, attr=MAP_CREDIT, zoom_snap=0.25)
+                   tiles=MAP_TILES, attr=MAP_CREDIT, zoom_snap=0.25, control_scale=True,
+                   min_zoom=4, max_zoom=13, max_bounds=True,
+                   min_lat=min(lats) - 8, max_lat=max(lats) + 8, min_lon=min(lons) - 15, max_lon=max(lons) + 15)
     m.get_root().header.add_child(folium.Element(map_css()))
     # City names only along the selected truck's route; with all trucks shown they would pile up
     # (hover any city for its name).
@@ -878,110 +934,128 @@ def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
     if selected in analysis:
         route = [data["trucks"][selected]["start_city"]] + [leg["to"] for leg in analysis[selected]["legs"]]
     named = set(route)
-    if only_selected and route:                          # driver view: zoom to this truck's own route
+    if route:          # one truck chosen: zoom to its route, close enough that OSM draws the roads
+                     # (OSM shows motorways only from zoom ~7; all of Europe needs zoom ~5)
         lats = [cities[c]["latitude"] for c in route]
         lons = [cities[c]["longitude"] for c in route]
-    m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]], padding=(30, 30))
+    # Keep the routes clear of the floating header (top), side panel (right) and legend (bottom)
+    m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]],
+                 padding_top_left=(70, TOP_H + 30), padding_bottom_right=(DOCK_WIDTH + 2 * INSET + 30, 80))
 
-    # Routes. The selected truck is drawn last so it sits on top.
-    draw_order = [t for t in analysis if t != selected] + ([selected] if selected in analysis else [])
+    def leg_points(leg, detail=False):
+        """The real road (data/road_shapes_detail.json), otherwise a gentle curve.
+        detail: ~200 m accuracy, for the one truck you zoom in on. Otherwise ~2 km, which is
+        invisible at fleet zoom and keeps the page light. Leaflet simplifies further per zoom."""
+        a, b = point(leg["from"]), point(leg["to"])
+        return roads.shape(a, b, 0.002 if detail else 0.02) or curve_points(a, b, 0.12)
+
+    # ---- Routes: ONE colour, like a route planner (mapy.com) ----------------------------------
+    #   all trucks    every route semi-transparent, so busy corridors come out darker
+    #   one selected  that truck strong, with a white edge and direction arrows; others faint
+    #   driver        only their truck; finished legs turn grey
+    # Legs with the same look are drawn as ONE multi-line (folium is slow per object).
+    shown = [t for t in sorted(analysis) if analysis[t]["legs"] and (not only_selected or t == selected)]
+    draw_order = [t for t in shown if t != selected] + ([selected] if selected in shown else [])
     for tid in draw_order:
-        if only_selected and tid != selected:
-            continue                                   # driver view: other trucks are not shown at all
-        focused = selected is None or tid == selected
+        legs = analysis[tid]["legs"]
         is_selected = tid == selected
-        colour = colours[tid]
-        for leg in analysis[tid]["legs"]:
-            loaded = leg["load_kg"] > 0
+        truck = data["trucks"][tid]
+        tip = f"{tid} · {truck['type']} · {analysis[tid]['orders']} orders · {analysis[tid]['km']:,} km"
+        groups = {}                                    # (loaded, finished) -> list of leg shapes
+        for leg in legs:
             finished = done_stops is not None and is_selected and leg["stop"] <= done_stops
-            bend = 0.10 + 0.05 * (truck_number[tid] % 4)
-            points = curve_points(point(leg["from"]), point(leg["to"]), bend)
-            if focused and not finished:
-                # glow: a wide, soft band in the truck's colour
-                folium.PolyLine(points, color=colour, weight=17 if is_selected else 11,
-                                opacity=GLOW_SELECTED if is_selected else GLOW).add_to(m)
-                if loaded:   # a casing in the map's own tone keeps the line crisp
-                    folium.PolyLine(points, color=CASING, weight=8 if is_selected else 6.5,
-                                    opacity=CASING_OPACITY).add_to(m)
-            style = {"color": colour, "weight": 4.5 if is_selected else 3.5,
-                     "opacity": 0.3 if finished else (1.0 if focused else FADED)}
-            if not loaded:
-                style["dash_array"] = "7 8"
-            what = f"carrying {leg['load_kg']:,} kg" if loaded else "driving empty"
-            line = folium.PolyLine(
-                points, tooltip=f"{tid}: {cities[leg['from']]['name']} → {cities[leg['to']]['name']}, "
-                                f"{leg['km']:,} km, {what}", **style).add_to(m)
-            if focused and not finished:
-                PolyLineTextPath(line, "►", center=True, offset=5,
-                                 attributes={"fill": colour, "font-size": "14"}).add_to(m)
+            groups.setdefault((leg["load_kg"] > 0, finished), []).append(leg_points(leg, is_selected))
+        for (loaded, finished), shapes in groups.items():
+            dash = None if loaded else "7 7"
+            if selected is None:                       # all trucks
+                folium.PolyLine(shapes, color=ROUTE, weight=3, opacity=0.45, dash_array=dash, tooltip=tip, smooth_factor=1.5).add_to(m)
+            elif not is_selected:                      # someone else's route: barely there
+                folium.PolyLine(shapes, color=ROUTE, weight=2, opacity=0.12, dash_array=dash, tooltip=tip, smooth_factor=1.5).add_to(m)
+            elif finished:                             # driver: already driven
+                folium.PolyLine(shapes, color=MUTED, weight=4, opacity=0.5, dash_array=dash, smooth_factor=1.5).add_to(m)
+            else:
+                folium.PolyLine(shapes, color=CASING, weight=9, opacity=CASING_OPACITY, smooth_factor=1.5).add_to(m)
+                folium.PolyLine(shapes, color=ROUTE, weight=5, opacity=1, dash_array=dash, tooltip=tip, smooth_factor=1.5).add_to(m)
+        if is_selected:                                # direction arrows, one per leg still to drive
+            for leg in legs:
+                if done_stops is not None and leg["stop"] <= done_stops:
+                    continue
+                arrow = folium.PolyLine(leg_points(leg, True), opacity=0, weight=1).add_to(m)
+                PolyLineTextPath(arrow, "►", center=True, offset=5,
+                                 attributes={"fill": ROUTE, "font-size": "15"}).add_to(m)
 
-    # Cities: soft graphite pearls, area grows with the number of orders
-    pickups = {cid: 0 for cid in cities}
-    deliveries = {cid: 0 for cid in cities}
-    for o in data["orders"].values():
-        pickups[o["pickup_city"]] += 1
-        deliveries[o["delivery_city"]] += 1
-    busiest = max(pickups[c] + deliveries[c] for c in cities) or 1
-    for cid, c in cities.items():
-        volume = pickups[cid] + deliveries[cid]
+    # ---- Green dots: stops of the orders trucks take. Hollow = still to do, filled = done -------
+    stops_at = {}                                      # city -> [(text, done)]
+    for tid in shown:
+        if selected is not None and tid != selected:
+            continue
+        for i, (row, cid) in enumerate(zip(analysis[tid]["stops"], analysis[tid]["stop_cities"])):
+            done = done_stops is not None and tid == selected and i < done_stops
+            what = "Pickup" if "Pickup" in row["Action"] else "Delivery"
+            stops_at.setdefault(cid, []).append((f"{what} {row['Order']} ({tid}){' ✓' if done else ''}", done))
+    for cid, items in stops_at.items():
+        all_done = all(d for _, d in items)
         folium.CircleMarker(
-            point(cid), radius=4 + 8 * math.sqrt(volume / busiest),
-            color=CITY_RING, weight=1.5, fill=True, fill_color=CITY_FILL, fill_opacity=0.55,
-            tooltip=f"{c['name']} ({c['country']}): {pickups[cid]} pickups, {deliveries[cid]} deliveries",
+            point(cid), radius=5 + min(len(items), 8) * 0.5, color=GREEN, weight=3,
+            fill=True, fill_color=GREEN if all_done else STOP_HOLLOW, fill_opacity=1,
+            tooltip=f"<b>{cities[cid]['name']}</b><br>" + "<br>".join(t for t, _ in items[:12])
+                    + (f"<br>+{len(items) - 12} more" if len(items) > 12 else ""),
         ).add_to(m)
         if cid in named:
             folium.Marker(point(cid), icon=folium.DivIcon(
                 icon_size=(140, 18), icon_anchor=(-12, 22),
                 html=f'<div style="color:{LABEL_TEXT};font-size:12px;font-weight:600;white-space:nowrap;'
                      f'font-family:Manrope,sans-serif;pointer-events:none;'
-                     f'text-shadow:0 0 3px {LABEL_HALO},0 0 3px {LABEL_HALO},0 0 6px {LABEL_HALO}">{c["name"]}</div>',
+                     f'text-shadow:0 0 3px {LABEL_HALO},0 0 3px {LABEL_HALO},0 0 6px {LABEL_HALO}">{cities[cid]["name"]}</div>',
             )).add_to(m)
 
-    # Truck start labels: glossy pills in the truck colour
-    stacked = {}
-    for tid in analysis:
-        if (only_selected and tid != selected) or not analysis[tid]["legs"]:
-            continue                                   # idle trucks get no label: nothing to point at
-        start = data["trucks"][tid]["start_city"]
-        level = stacked.get(start, 0)
-        stacked[start] = level + 1
-        faded = selected is not None and tid != selected
-        folium.Marker(point(start), icon=folium.DivIcon(
-            icon_size=(42, 20), icon_anchor=(52, 10 + 22 * level),
-            html=f'<div style="background:{colours[tid]};color:{PILL_TEXT};font-size:11px;font-weight:700;'
-                 f'font-family:Manrope,sans-serif;border-radius:10px;padding:2px 8px;text-align:center;'
-                 f'opacity:{0.3 if faded else 1};box-shadow:0 0 0 2px {MARKER_RING},'
-                 f'0 4px 12px {colours[tid]}77">{tid}</div>',
-        ), tooltip=f"{tid} starts here").add_to(m)
-
-    # Driver view: where the truck is now
-    if here_city is not None:
-        folium.CircleMarker(point(here_city), radius=8, color=ACCENT, weight=4, fill=True,
-                            fill_color=TEXT, fill_opacity=1, tooltip="You are here").add_to(m)
-        folium.Marker(point(here_city), icon=folium.DivIcon(
-            icon_size=(100, 18), icon_anchor=(50, -12),
-            html=f'<div style="text-align:center;color:{LABEL_TEXT};font-size:11px;font-weight:700;'
-                 f'font-family:Manrope,sans-serif;pointer-events:none;'
-                 f'text-shadow:0 0 3px {LABEL_HALO},0 0 3px {LABEL_HALO},0 0 6px {LABEL_HALO}">You are here</div>',
-        )).add_to(m)
-
-    # Red rings: orders that no truck completes, with a count badge (shape + number, not colour alone)
+    # ---- Red dots: orders no truck takes (at the pickup city, nudged up-right so a green dot stays visible)
     if show_unplanned:
         by_city = {}
         for o in not_in_plan:
             by_city.setdefault(o["pickup_city"], []).append(o)
         for cid, orders in by_city.items():
-            listing = "<br>".join(f"{o['id']} to {cities[o['delivery_city']]['name']} "
-                                  f"({o['weight_kg']:,} kg{', ' + o['required_truck_type'] if o.get('required_truck_type') else ''})"
+            listing = "<br>".join(f"{o['id']}: → {cities[o['delivery_city']]['name']}, {o['weight_kg']:,} kg"
+                                  f"{', needs ' + o['required_truck_type'] if o.get('required_truck_type') else ''}"
                                   for o in orders)
-            folium.CircleMarker(point(cid), radius=16, color=RED, weight=2, fill=False,
-                                tooltip=f"<b>Not in the plan</b><br>{listing}").add_to(m)
+            size = 11 + min(len(orders), 4) * 1.5
             folium.Marker(point(cid), icon=folium.DivIcon(
-                icon_size=(20, 16), icon_anchor=(10, 36),
-                html=f'<div style="background:{RED};color:#fff;font-size:10px;font-weight:700;border-radius:8px;'
-                     f'font-family:Manrope,sans-serif;text-align:center;line-height:16px;'
-                     f'box-shadow:0 0 0 2px {MARKER_RING},0 3px 8px {RED}88">{len(orders)}</div>',
-            ), tooltip=f"<b>Not in the plan</b><br>{listing}").add_to(m)
+                icon_size=(size, size), icon_anchor=(-3, size + 3),
+                html=f'<div style="width:{size}px;height:{size}px;border-radius:50%;background:{RED};'
+                     f'box-shadow:0 0 0 2px #fff,0 2px 6px rgba(0,0,0,0.3)"></div>',
+            ), tooltip=f"<b>{cities[cid]['name']}: {len(orders)} order{'s' if len(orders) != 1 else ''} "
+                       f"unserved</b><br>{listing}").add_to(m)
+        if unserved_lines:                             # "Unserved orders" tab open: show where each would go.
+            for o in not_in_plan:                      # straight dashed lines = demand, not a driven road
+                a, b = point(o["pickup_city"]), point(o["delivery_city"])
+                tip = (f"<b>{o['id']} unserved</b><br>{cities[o['pickup_city']]['name']} → "
+                       f"{cities[o['delivery_city']]['name']}, {o['weight_kg']:,} kg")
+                folium.PolyLine([a, b], color=RED, weight=2, opacity=0.75, dash_array="2 6", tooltip=tip).add_to(m)
+                folium.CircleMarker(b, radius=5, color=RED, weight=2, fill=True, fill_color="#fff",
+                                    fill_opacity=1, tooltip=tip).add_to(m)
+
+    # ---- Trucks: a plain truck icon standing on its city (start, or where the driver is now) -----
+    # Several trucks at one city become one icon with "×N", so no icon sits off its real position.
+    at_city = {}
+    for tid in shown:
+        if selected is not None and tid != selected:
+            continue
+        where = here_city if (here_city is not None and tid == selected) else data["trucks"][tid]["start_city"]
+        at_city.setdefault(where, []).append(tid)
+    for where, tids in at_city.items():
+        text = selected if selected in tids else (f"×{len(tids)}" if len(tids) > 1 else "")
+        label = (f'<span style="position:absolute;left:30px;top:6px;font:800 12px Manrope,sans-serif;'
+                 f'color:{TRUCK_BG};white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 5px #fff">{text}</span>'
+                 if text else "")
+        state = "now here" if where == here_city else "start here"
+        folium.Marker(point(where), icon=folium.DivIcon(
+            icon_size=(28, 28), icon_anchor=(14, 30),  # bottom-centre of the icon just above the city dot
+            html=f'<div style="position:relative;width:28px;height:28px;'
+                 f'filter:drop-shadow(0 2px 2px rgba(0,0,0,0.3))">{truck_svg(28)}{label}</div>',
+        ), tooltip=f"<b>{cities[where]['name']}</b> · {state}<br>"
+                   + "<br>".join(f"{t} · {data['trucks'][t]['type']}" for t in tids),
+            z_index_offset=1000,                        # always above city names and dots
+        ).add_to(m)
     return m
 
 
@@ -1011,19 +1085,37 @@ apply_theme(st.session_state.theme)
 inject_css()
 html(f"""<style>
   /* the data menu in the header looks like a status chip */
-  .st-key-data_menu [data-testid="stPopover"] button {{ border-radius: 999px; background: {INPUT_BG};
+  .st-key-data_menu button {{ border-radius: 999px; background: {INPUT_BG};
         border: 1px solid {INPUT_BORDER}; box-shadow: {INPUT_SHADOW}; padding: 6px 14px; min-height: 0; }}
-  .st-key-data_menu [data-testid="stPopover"] button p {{ font-size: 0.8rem; font-weight: 600; color: {TEXT}; }}
+  .st-key-data_menu button p {{ font-size: 0.8rem; font-weight: 600; color: {TEXT}; }}
   .st-key-data_menu {{ display: flex; justify-content: flex-end; }}
 </style>""")
 
 if "role" not in st.session_state:
     st.session_state.role = "Dispatcher"
 
-scenarios = list_scenarios()
-if not scenarios:
-    st.error(f"No scored plans in {DB_PATH}. Run ./run_all.sh from the repo root first.")
+scenario = SCENARIO
+if scenario not in list_scenarios():
+    st.error(f"No scored plans for {scenario} in {DB_PATH}. Run the solver first: "
+             f"`cd solver && python run.py {scenario}`.")
     st.stop()
+
+
+def refresh():
+    """Re-read the DB (new fetches and solver runs) and fetch road shapes for any new legs."""
+    st.cache_data.clear()
+    roads.reset()
+    try:
+        added = roads.fill([scenario], max_new=60)    # only legs not cached yet; ~1 s each
+        if added < 0:                                 # too many for a button click: do it in a terminal
+            st.session_state.refresh_note = (f"Updated · {-added} roads missing (drawn as curves): "
+                                             f"run python3 dashboard/roads.py {scenario}")
+        else:
+            st.session_state.refresh_note = (f"Updated · {added} new road{'s' if added != 1 else ''}"
+                                             if added else "Updated")
+    except Exception as error:                        # offline: still show the new plans, drawn as curves
+        st.session_state.refresh_note = f"Updated (roads not fetched: {error.__class__.__name__})"
+    st.session_state.refreshed_at = pd.Timestamp.now().strftime("%H:%M")
 
 # ---- Header: brand · role tabs · data menu · status · theme --------------------------------
 with st.container(key="topbar"):
@@ -1035,14 +1127,12 @@ with head_role:
     st.segmented_control("View", list(ROLE_PRESETS), key="role", required=True, label_visibility="collapsed")
 with head_data:
     with st.container(key="data_menu"):
-        current = st.session_state.get("scenario", scenarios[0])
-        with st.popover(current.replace("scenario_", "Scenario: "), icon=":material/database:"):
-            scenario = st.selectbox("Scenario", scenarios, key="scenario")
-            plans = list_plans(scenario)
-            if not plans:
-                st.warning(f"{scenario} has no plan yet: run `cd solver && python run.py {scenario}`.")
-                st.stop()
-            plan_file = st.selectbox("Plan (best score first)", plans, key="plan_file")
+        plans = list_plans(scenario)                   # best valid plan first
+        plan_file = plans[0]
+        when = st.session_state.get("refreshed_at")
+        st.button(f"Refresh · {when}" if when else "Refresh", icon=":material/refresh:", on_click=refresh,
+                  help=f"Reload the newest data and solver results for {scenario}. "
+                       f"Showing the best plan: {plan_file}. " + st.session_state.get("refresh_note", ""))
 with head_theme:
     going_to = "dark" if st.session_state.theme == "light" else "light"
     st.button("", key="theme_toggle", on_click=toggle_theme,
@@ -1082,18 +1172,22 @@ def stop_back(key):
     st.session_state[key] = max(st.session_state.get(key, 0) - 1, 0)
 
 
-# ---- Layout: number strip, then map (left) + side panel (right); Manager: no map --------------
-if show_numbers:
-    with st.container(key="ribbon_slot"):
-        ribbon_html(data, analysis, not_in_plan, official, baseline_score(scenario))
-
+# ---- Layout -----------------------------------------------------------------------------
+#   Dispatcher / Driver: the map is the whole background, the side panel floats on the right.
+#   Manager: no map; the full number strip on top and the economics underneath.
 if show_map:
-    map_col, dock_col = st.columns([2.4, 1], gap="medium")
-    with map_col:
-        map_holder = st.container(key="mapbox")      # filled last, once the truck choice is known
-        legend_slot = st.container(key="legend_slot")
-    dock = dock_col.container(key="dock")
+    # The page itself lets clicks through to the map; only the floating panels catch them.
+    html("""<style>
+      [data-testid="stMain"] { pointer-events: none; }
+      .st-key-topbar, .st-key-dock, .st-key-legend_slot, .st-key-mapbox { pointer-events: auto; }
+    </style>""")
+    map_holder = st.container(key="mapbox")          # filled last, once the truck choice is known
+    legend_slot = st.container(key="legend_slot")
+    dock = st.container(key="dock")
 else:
+    if show_numbers:
+        with st.container(key="ribbon_slot"):
+            ribbon_html(data, analysis, not_in_plan, official, baseline_score(scenario))
     dock = st.container(key="dock_static")
 
 used_trucks = [t for t in sorted(analysis) if analysis[t]["orders"]]
@@ -1118,11 +1212,11 @@ with dock:
         head.markdown(f'<div class="dock-head"><div class="h2">Your route</div><div class="cap">{meta}</div></div>',
                       unsafe_allow_html=True)
     elif role == "Manager":
-        head.markdown('<div class="dock-head"><div class="h2">Fleet economics</div>'
+        head.markdown('<div class="dock-head"><div class="h2">Costs per truck</div>'
                       '<div class="cap">cost and CO₂ per truck</div></div>', unsafe_allow_html=True)
     else:
         n_orders = sum(t["orders"] for t in analysis.values())
-        head.markdown(f'<div class="dock-head"><div class="h2">Fleet</div>'
+        head.markdown(f'<div class="dock-head"><div class="h2">Trucks</div>'
                       f'<div class="cap">{len(used_trucks)} of {len(data["trucks"])} trucks · '
                       f'{n_orders} orders</div></div>', unsafe_allow_html=True)
 
@@ -1159,9 +1253,15 @@ with dock:
 
         else:   # Dispatcher: the fleet and what is left over, or one truck's route
             if selected is None:
-                fleet_list_html(data, analysis, colours, role)
-                if not_in_plan:
-                    html('<div class="hair"></div>')
+                summary_html(data, analysis, official, baseline_score(scenario))
+                html('<div class="hair"></div>')
+                trucks_tab = f"Trucks ({len(used_trucks)})"
+                tabs = [trucks_tab] + ([f"Unserved orders ({len(not_in_plan)})"] if not_in_plan else [])
+                tab = st.segmented_control("List", tabs, key="dock_tab", default=trucks_tab,
+                                           label_visibility="collapsed") or trucks_tab
+                if tab == trucks_tab:
+                    fleet_list_html(data, analysis, colours, role)
+                else:
                     not_served_html(data, not_in_plan)
             else:
                 identity_html(data, colours, selected)
@@ -1179,7 +1279,9 @@ if show_map:
     with map_holder:
         fleet_map = build_map(data, analysis, not_in_plan, selected,
                               show_unplanned="Orders not in plan" in show,
-                              only_selected=is_driver, done_stops=done_stops, here_city=here)
-        st_folium(fleet_map, height=640, use_container_width=True, returned_objects=[], key="prism_map")
+                              only_selected=is_driver, done_stops=done_stops, here_city=here,
+                              unserved_lines=(role == "Dispatcher" and selected is None
+                                              and str(st.session_state.get("dock_tab", "")).startswith("Unserved")))
+        st_folium(fleet_map, height=800, use_container_width=True, returned_objects=[], key="prism_map")
     with legend_slot:
         legend_html(show_unplanned="Orders not in plan" in show, show_here=here is not None)
