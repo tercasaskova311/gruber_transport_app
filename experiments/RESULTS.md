@@ -28,8 +28,9 @@ scenarios the largest observed std, 3.1, is used for all three.)
 | baseline | bench @ d3c8304 | 1000.00 | 997.13 | 969.85 | 916.00 | 923.47 | 895.81 | 901.74 | reference | - |
 | speed (same search, 1.5-2x more iterations) | algo/speed @ 61f4814 | 1000.00 (0) | 997.11 (-0.02, noise) | 971.59 (**+1.74**) | 919.16 (+3.16, noise) | 926.87 (**+3.40**) | 897.21 (+1.40, noise) | 903.44 (+1.70, noise) | accept as infrastructure: nothing worse, big and fake_big_a better beyond noise, competitive up but within noise | **accepted**, merged into best |
 | **best** after merging speed (re-run, current reference) | best @ 0fd3103 | 1000.00 | 997.14 | 971.66 | 919.91 | 925.77 | 896.34 | 904.15 | reference for the next experiments | - |
-| ejection sweep (config `eject`) | algo/ejection @ 9d2db83 | 1000.00 (0) | 997.11 (-0.03, noise) | 970.51 (**-1.15**, worse) | 924.88 (**+4.97**, at the threshold, all 3 seeds above best's max) | 926.91 (+1.14, noise) | 898.07 (+1.73, noise) | 903.90 (-0.25, noise) | accept: competitive better; the big drop was seed luck (8-seed check below) | pending |
-| ejection + blocking destroy (config `eject+block`, 3 scenarios only) | algo/ejection @ 9d2db83 | - | - | 971.05 (-0.61, worse) | 924.18 (+4.27, noise) | - | 897.66 (+1.32, noise) | - | no gain over `eject` alone | pending |
+| ejection sweep (config `eject`) | algo/ejection @ 9d2db83 | 1000.00 (0) | 997.11 (-0.03, noise) | 970.51 (**-1.15**, worse) | 924.88 (**+4.97**, at the threshold, all 3 seeds above best's max) | 926.91 (+1.14, noise) | 898.07 (+1.73, noise) | 903.90 (-0.25, noise) | accept: competitive better; the big drop was seed luck (8-seed check below) | **accepted**, merged into best, on by default |
+| ejection + blocking destroy (config `eject+block`, 3 scenarios only) | algo/ejection @ 9d2db83 | - | - | 971.05 (-0.61, worse) | 924.18 (+4.27, noise) | - | 897.66 (+1.32, noise) | - | no gain over `eject` alone | kept in code, off |
+| **best** after merging ejection (current reference; big = 8 seeds) | best @ cb9aeb5 | 1000.00 | 997.15 | 971.19 (8 seeds: 2 low, 6 high) | 924.50 | 926.85 | 898.02 | 902.30 | reference for the next experiments | - |
 
 Note: runs are time-limited, so the same code and seeds do not repeat exactly (compare the two
 rows above: same code, competitive 919.16 vs 919.91, fake_big_a 926.87 vs 925.77 with one seed
