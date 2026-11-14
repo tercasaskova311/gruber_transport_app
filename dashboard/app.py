@@ -1,19 +1,10 @@
 """
-Fleet Control Tower, PRISM edition (experimental design, iteration 3: Light + Midnight)
-GRUBER Logistics Grand Prix, NOI Hackathon 2026
-
-Light, pearlescent "liquid glass". The map is the stage; the information floats
-above it: a score ribbon, a fleet dock and a legend. All three roles from app.py
-(Dispatcher, Manager, Driver) work here with the same data, calculations and
-driver progress.
-
-How this file is organised:
   1. Design tokens       colours, type scale, radii, sizes, role presets
   2. Loading data        scenarios and plans from the team's DuckDB (data/hackathon.duckdb)
   3. Route calculations  identical to app.py
   4. Glass components    header, ribbon, dock sections, stop timeline, legend
-  5. The map             pale pearlescent tiles, glowing routes
-  6. The page            role-based layout
+  5. The map             quiet OSM basemap (CARTO), glowing routes
+  6. The page            role tabs; number strip, map + side panel
 
 Run it from the repo root (the theme is in .streamlit/config.toml there):
     python -m streamlit run dashboard/app.py
@@ -36,13 +27,10 @@ from streamlit_folium import st_folium
 #    Two atmospheres of one product. Every colour in the app comes from the active
 #    palette, so both themes share exactly the same layout, type and components.
 # =============================================================================
-BRAND_FONT = "'Instrument Serif', Georgia, serif"   # used for the brand title only
-MAP_CREDIT = "Esri, OpenStreetMap contributors"
-
-_LIGHT_TILES = ("https://services.arcgisonline.com/arcgis/rest/services/"
-                "Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}")
-_DARK_TILES = ("https://services.arcgisonline.com/arcgis/rest/services/"
-               "Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}")
+BRAND_NAME = "Logi-Wise"
+# OpenStreetMap's own tiles (no API key), turned grey with a CSS filter so the routes stand out.
+MAP_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+_OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 
 THEMES = {
     # ---------------- Light Prism: mint · pearl · lavender ----------------
@@ -75,19 +63,16 @@ THEMES = {
         SIDEBAR_BG="linear-gradient(180deg, rgba(255,255,255,0.80), rgba(255,255,255,0.55))",
         SIDEBAR_BORDER="rgba(255,255,255,0.9)",
         SEG_ON_BG="linear-gradient(180deg, #FFFFFF, rgba(255,255,255,0.7))",
-        SEG_ON_SHADOW=("inset 0 1px 0 #FFFFFF, 0 2px 8px rgba(60,66,96,0.14), 0 0 0 1px rgba(143,227,200,0.9), "
-                       "0 0 16px rgba(143,227,200,0.6)"),
+        SEG_ON_SHADOW=("inset 0 1px 0 #FFFFFF, 0 2px 8px rgba(60,66,96,0.14), 0 0 0 1px rgba(143,227,200,0.9)"),
         STAGE_RING="rgba(255,255,255,0.75)",
         STAGE_SHADOW="0 2px 4px rgba(60,66,96,0.06), 0 30px 70px rgba(90,84,140,0.20)",
         BTN_PRIMARY="linear-gradient(180deg, #2FB7A0, #22A08C)", BTN_PRIMARY_TEXT="#FFFFFF",
         BTN_SHADOW="0 6px 16px rgba(34,160,140,0.32)", BTN_SECONDARY_BG="rgba(255,255,255,0.55)",
         ORB_RING="rgba(255,255,255,0.9)", LOGO_GLOW="rgba(120,110,190,0.30)",
         # map
-        MAP_TILES=_LIGHT_TILES, MAP_BG="#EEF1F2",
-        MAP_TINT="saturate(0.6) sepia(0.12) hue-rotate(118deg) brightness(1.03) contrast(0.95)",
-        MAP_SHEEN=("radial-gradient(70% 60% at 12% 8%, rgba(143,227,200,0.22), transparent 70%),"
-                   "radial-gradient(60% 60% at 80% 92%, rgba(203,185,242,0.22), transparent 70%),"
-                   "radial-gradient(45% 45% at 62% 18%, rgba(237,195,220,0.16), transparent 70%)"),
+        MAP_TILES=_OSM_TILES, MAP_BG="#EEF1F2",
+        MAP_TINT="grayscale(1) brightness(1.04) contrast(0.88)",
+        MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(255,255,255,0.82)", MAP_CONTROL_LINE="rgba(39,43,51,0.08)",
         TOOLTIP_BG="#FFFFFF",
         CITY_FILL="#5E6680", CITY_RING="#FFFFFF", LABEL_TEXT="#2E333D", LABEL_HALO="#FFFFFF",
@@ -125,19 +110,16 @@ THEMES = {
         SIDEBAR_BORDER="rgba(255,255,255,0.08)",
         SEG_ON_BG="linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08))",
         SEG_ON_SHADOW=("inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.30), "
-                       "0 0 0 1px rgba(95,214,190,0.75), 0 0 16px rgba(95,214,190,0.45)"),
+                       "0 0 0 1px rgba(95,214,190,0.75)"),
         STAGE_RING="rgba(255,255,255,0.10)",
         STAGE_SHADOW="0 2px 4px rgba(0,0,0,0.25), 0 30px 70px rgba(8,4,24,0.55)",
         BTN_PRIMARY="linear-gradient(180deg, #6FDDC6, #43BFA6)", BTN_PRIMARY_TEXT="#16122A",
         BTN_SHADOW="0 6px 18px rgba(95,214,190,0.28)", BTN_SECONDARY_BG="rgba(255,255,255,0.08)",
         ORB_RING="rgba(255,255,255,0.35)", LOGO_GLOW="rgba(150,118,232,0.45)",
         # map
-        MAP_TILES=_DARK_TILES, MAP_BG="#1E1830",
-        MAP_TINT="sepia(0.6) hue-rotate(218deg) saturate(2.4) brightness(0.95) contrast(1.05)",
-        MAP_SHEEN=("radial-gradient(70% 60% at 12% 8%, rgba(95,214,190,0.10), transparent 70%),"
-                   "radial-gradient(60% 60% at 80% 92%, rgba(150,118,232,0.18), transparent 70%),"
-                   "radial-gradient(45% 45% at 62% 18%, rgba(201,120,176,0.10), transparent 70%),"
-                   "linear-gradient(rgba(74,46,140,0.22), rgba(74,46,140,0.22))"),
+        MAP_TILES=_OSM_TILES, MAP_BG="#1E1830",
+        MAP_TINT="grayscale(1) invert(1) brightness(0.85) contrast(0.9) sepia(0.25) hue-rotate(210deg)",
+        MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(52,43,74,0.88)", MAP_CONTROL_LINE="rgba(255,255,255,0.10)",
         TOOLTIP_BG="#2C2442",
         CITY_FILL="#CFC6EC", CITY_RING="#211B35", LABEL_TEXT="#EDE8F7", LABEL_HALO="#1B1530",
@@ -156,28 +138,18 @@ def apply_theme(name):
 apply_theme("light")                                  # Light Prism is the default
 
 
-# Layout
-DOCK_WIDTH = 384           # the floating fleet dock on the right
-INSET = 16                 # every floating element sits this far from the map's edge
-STAGE_OFFSET = 116         # page height taken by the header and margins (the map fills the rest)
-R_PANEL = 26               # corner radius: floating panels (ribbon, dock)
+# Layout: the map is the whole background; header bar, side panel and legend float on it.
+DOCK_WIDTH = 384           # the side panel floating on the right of the map
+TOP_H = 96                 # height of the floating header bar plus its margins
+INSET = 16                 # every floating element sits this far from the screen edge
+R_PANEL = 22               # corner radius: panels (number strip, side panel, map)
 R_INNER = 14               # corner radius: anything inside a panel (inputs, rows, buttons)
 
-# Everything a user can switch on or off (sidebar → Advanced display settings)
-PANELS = ["Fleet numbers", "Map", "Fleet table", "Truck details", "Stops",
-          "Orders not in plan", "City names"]
-
-# Ready-made views: who uses the app, and what they need to see (same as app.py)
+# What each role sees. Each role gets its own screen, not the same screen with a different label.
 ROLE_PRESETS = {
-    "Dispatcher": ["Fleet numbers", "Map", "Fleet table", "Truck details", "Stops",
-                   "Orders not in plan", "City names"],
-    "Manager":    ["Fleet numbers", "Map", "Fleet table", "Truck details", "Orders not in plan"],
-    "Driver":     ["Map", "Truck details", "Stops", "City names"],
-}
-ROLE_DESCRIPTIONS = {
-    "Dispatcher": "Plans the whole fleet: every truck, every number.",
-    "Manager":    "Follows cost, CO₂ and efficiency across the fleet.",
-    "Driver":     "Sees only their own truck: route, stops and load.",
+    "Dispatcher": ["Fleet numbers", "Map", "Fleet table", "Truck details", "Stops", "Orders not in plan"],
+    "Manager":    ["Fleet numbers", "Fleet table", "Truck details", "Orders not in plan"],   # numbers, no map
+    "Driver":     ["Map", "Truck details", "Stops"],                                           # one truck only
 }
 
 
@@ -211,7 +183,7 @@ def list_scenarios():
         return [r[0] for r in con.execute("SELECT DISTINCT scenario_id FROM results.runs ORDER BY 1").fetchall()]
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=30) # re-read every 30 s, so new solver runs show up
 def _runs(scenario):
     with _db() as con:
         return con.execute("""
@@ -262,6 +234,15 @@ def load_plan(scenario, plan_file):
     with _db() as con:
         return json.loads(con.execute("SELECT plan_json FROM results.runs WHERE run_id = ?",
                                       [_run_id(plan_file)]).fetchone()[0])
+
+
+@st.cache_data(ttl=30)
+def baseline_score(scenario):
+    """Best score of the plain greedy start (algo 'construct'), or None if it was never run."""
+    with _db() as con:
+        r = con.execute("SELECT max(score) FROM results.runs WHERE scenario_id = ? AND algo = 'construct' "
+                        "AND n_violations = 0", [scenario]).fetchone()
+    return r[0] if r else None
 
 
 def load_official(scenario, plan_file):
@@ -396,7 +377,11 @@ def inject_css():
       [data-testid="stExpandSidebarButton"], [data-testid="stExpandSidebarButton"] *,
       [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarCollapseButton"] * {{ color: {TEXT} !important; }}   /* developer menu: not needed here, and it crowded the theme toggle */
       .block-container, [data-testid="stMainBlockContainer"] {{ padding: 12px 22px 14px !important; max-width: none; }}
-      .st-key-topbar {{ padding-bottom: 12px; }}         /* breathing room between the header and the map */
+      /* Header: one floating glass bar, so it stays readable over the map */
+      .st-key-topbar {{ position: relative; z-index: 6; margin-bottom: 12px; padding: 8px 14px; border-radius: {R_PANEL}px;
+                        background: {GLASS}; backdrop-filter: blur(22px) saturate(170%);
+                        -webkit-backdrop-filter: blur(22px) saturate(170%);
+                        border: 1px solid {GLASS_BORDER}; box-shadow: {EDGE}, {LIFT}; }}
       [data-testid="stSidebar"] {{ background: {SIDEBAR_BG} !important; backdrop-filter: blur(24px) saturate(160%);
                                    border-right: 1px solid {SIDEBAR_BORDER}; }}
       [data-testid="stSidebar"] button, [data-testid="stSidebarCollapseButton"] * {{ color: {TEXT}; }}
@@ -450,12 +435,13 @@ def inject_css():
       .hair {{ height: 1px; background: {HAIR}; box-shadow: 0 1px 0 {HAIR_SHADOW}; }}
 
       /* ---------- Header ---------- */
-      .brand {{ display: flex; align-items: center; gap: 14px; padding-left: 40px; min-width: 0; }}
+      .brand {{ display: flex; align-items: center; gap: 12px; min-width: 0; }}
       .orb-logo {{ width: 38px; height: 38px; border-radius: 50%; flex: none;
                    background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.95) 0 16%, rgba(255,255,255,0) 42%), {PRISM};
                    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), inset 0 -6px 12px rgba(120,100,180,0.25),
                                0 8px 20px {LOGO_GLOW}; }}
-      .brand-title {{ font-family: {BRAND_FONT}; font-size: 1.95rem; line-height: 1; color: {TEXT}; white-space: nowrap; }}
+      .brand-title {{ font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: {TEXT};
+                      white-space: nowrap; }}
       .brand-title span {{ background: {SPECTRAL}; -webkit-background-clip: text; background-clip: text; color: transparent;
                            padding-right: 2px; }}
       .brand .ov {{ margin-top: 6px; letter-spacing: 0.16em; }}
@@ -483,32 +469,28 @@ def inject_css():
       .st-key-theme_toggle button:active {{ transform: scale(0.96); }}
       .st-key-theme_toggle button span {{ font-size: 1.2rem; color: {TEXT} !important; }}
 
-      /* ---------- Stage: the map fills the screen, glass floats above it ---------- */
-      .st-key-stage {{ position: relative; gap: 0 !important; border-radius: 30px; overflow: hidden;
-                       box-shadow: 0 0 0 1px {STAGE_RING}, {STAGE_SHADOW}; }}
-      iframe[title="streamlit_folium.st_folium"] {{ height: calc(100vh - {STAGE_OFFSET}px) !important;
-                                                    min-height: 460px; display: block; }}
-      .st-key-ribbon_slot {{ position: absolute; top: {INSET}px; left: {INSET}px; z-index: 6;
-                             max-width: calc(100% - {DOCK_WIDTH}px - {3 * INSET}px); }}
-      .st-key-legend_slot {{ position: absolute; left: {INSET}px; bottom: {INSET}px; z-index: 6;
-                             max-width: calc(100% - {DOCK_WIDTH}px - {3 * INSET}px); }}
-      .st-key-ribbon_static {{ margin-bottom: 4px; }}
+      /* ---------- Stage: the map is the whole background; header, side panel and legend float on it ---------- */
+      .st-key-mapbox {{ position: fixed !important; inset: 0; z-index: 0; gap: 0 !important; }}
+      .st-key-mapbox iframe, iframe[title="streamlit_folium.st_folium"] {{
+          position: fixed; inset: 0; width: 100vw !important; height: 100vh !important; display: block; border: 0; }}
+      .st-key-legend_slot {{ position: fixed !important; left: {INSET}px; bottom: {INSET}px; z-index: 6;
+                             max-width: calc(100vw - {DOCK_WIDTH + 3 * INSET}px); }}
+      .st-key-ribbon_slot, .st-key-ribbon_static {{ margin-bottom: 4px; }}
 
-      /* ---------- Ribbon: label / value / caption on three shared lines ---------- */
-      .ribbon {{ width: fit-content; display: flex; flex-wrap: wrap; row-gap: 12px; padding: 14px 6px;
+      /* ---------- Number strip: label / value / caption on three shared lines ---------- */
+      .ribbon {{ width: 100%; display: flex; flex-wrap: wrap; row-gap: 12px; padding: 14px 6px;
                  border-radius: {R_PANEL}px; }}
-      .ribbon .cell {{ padding: 0 16px; display: flex; flex-direction: column; gap: 3px; }}
+      .ribbon .cell {{ flex: 1 1 140px; padding: 0 16px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }}
       .ribbon .cell + .cell {{ border-left: 1px solid {HAIR}; box-shadow: -1px 0 0 {HAIR_SHADOW}; }}
       .ribbon .vl, .ribbon .score {{ height: 1.75rem; display: flex; align-items: flex-end; }}
       .ribbon .score {{ font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;
                         background: {SPECTRAL}; -webkit-background-clip: text; background-clip: text; color: transparent; }}
 
       /* ---------- Dock: one glass surface, sections divided by space and hairlines ---------- */
-      .st-key-dock {{ position: absolute !important; top: {INSET}px; right: {INSET}px; bottom: {INSET}px;
-                      width: {DOCK_WIDTH}px; z-index: 6; border-radius: {R_PANEL}px; padding: 18px 18px 6px; gap: 12px;
-                      overflow: hidden; }}
-      .st-key-picker {{ position: absolute !important; top: {INSET}px; right: {INSET}px; width: 320px; z-index: 6;
-                        border-radius: {R_PANEL}px; padding: 16px 18px; gap: 10px; }}
+      .st-key-dock {{ position: fixed !important; top: {TOP_H}px; right: {INSET}px; bottom: {INSET}px;
+                      width: {DOCK_WIDTH}px; z-index: 6; border-radius: {R_PANEL}px;
+                      padding: 18px 18px 6px; gap: 12px; overflow: hidden; }}
+      .st-key-picker {{ border-radius: {R_PANEL}px; padding: 16px 18px; gap: 10px; }}
       .st-key-dock_static {{ max-width: 760px; margin: 0 auto; border-radius: {R_PANEL}px; padding: 18px; gap: 12px; }}
       .st-key-dock > div:has(.st-key-dock_scroll) {{ flex: 1 1 auto; min-height: 0; }}
       /* The scroll area reaches past the content edge on each side, so marker rings and glows
@@ -605,8 +587,9 @@ def inject_css():
       .st-key-dock_scroll button p {{ font-size: 0.84rem; font-weight: 700; }}
 
       /* ---------- Legend ---------- */
-      .legend {{ width: fit-content; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 8px 16px;
-                 border-radius: 999px; }}
+      .legend {{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 12px 6px 0; }}
+      .idle {{ padding: 9px 10px; }}
+      .unserved .row {{ grid-template-columns: minmax(0, 1fr) auto; }}
       .legend span {{ display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 0.74rem;
                       font-weight: 500; color: {MUTED}; }}
 
@@ -634,56 +617,54 @@ def meter(value, maximum):
 
 
 def brand_html():
-    html('<div class="brand"><div class="orb-logo"></div><div style="min-width:0">'
-         '<div class="brand-title">Fleet <span>Control Tower</span></div>'
-         '<div class="ov">GRUBER Logistics Grand Prix &nbsp;/&nbsp; NOI Hackathon 2026</div></div></div>')
+    html(f'<div class="brand"><div class="orb-logo"></div><div style="min-width:0">'
+         f'<div class="brand-title">Logi<span>-Wise</span></div>'
+         f'<div class="ov">Truck planning &nbsp;·&nbsp; Gruber Logistics Hackathon 2026</div></div></div>')
 
 
-def chips_html(scenario, plan_file, problems, show_checks):
-    data_chip = (f'<span class="chip lg" title="DuckDB results.runs, {escape(plan_file)}. Change it in the sidebar.">'
-                 f'<span class="dot" style="background:{ACCENT}"></span>{escape(scenario)}</span>')
-    check = ""
-    if show_checks:
-        if problems:
-            check = (f'<span class="chip lg" title="Each official violation costs 20 points. Details in the panel.">'
-                     f'<span class="dot" style="background:{RED};box-shadow:0 0 8px {RED}"></span>'
-                     f'{len(problems)} rule problem{"s" if len(problems) != 1 else ""}</span>')
-        else:
-            check = (f'<span class="chip lg" title="Capacity, truck types and pickup-before-delivery look fine. '
-                     f'Time windows are checked by the simulator.">'
-                     f'<span class="dot" style="background:{ACCENT};box-shadow:0 0 8px {AQUA}"></span>Checks passed</span>')
-    html(f'<div class="chips">{data_chip}{check}</div>')
+def chips_html(problems, official):
+    """One status chip: is the plan clean? (Each official violation costs 20 points.)"""
+    bad = official["violations"] if official else len(problems)
+    colour = RED if bad else ACCENT
+    text = f"{bad} violation{'s' if bad != 1 else ''}" if bad else "0 violations"
+    tip = ("Each violation costs 20 points." if bad else
+           "Capacity, truck types, time windows and driving breaks all respected.")
+    html(f'<div class="chips"><span class="chip lg" title="{tip}">'
+         f'<span class="dot" style="background:{colour}"></span>{text}</span></div>')
 
 
-def ribbon_html(data, analysis, not_in_plan, official=None):
+def ribbon_html(data, analysis, not_in_plan, official=None, baseline=None):
     total_km = sum(t["km"] for t in analysis.values())
     loaded_km = sum(t["loaded_km"] for t in analysis.values())
-    used = sum(1 for t in analysis.values() if t["km"] > 0 or t["orders"] > 0)
+    empty_km = total_km - loaded_km
+    used = sum(1 for t in analysis.values() if t["km"] > 0)
     done = len(data["orders"]) - len(not_in_plan)
     cost = sum(t["cost"] for t in analysis.values())
     co2 = sum(t["co2"] for t in analysis.values())
-    loaded = f'{100 * loaded_km / total_km:.0f}<span class="unit">%</span>' if total_km else "—"
+    loaded_pct = f"{100 * loaded_km / total_km:.0f}% of km with cargo" if total_km else "&nbsp;"
     cell = lambda label, value, caption, tip: (f'<div class="cell" title="{escape(tip)}"><div class="ov">{label}</div>'
                                                f'<div class="vl">{value}</div><div class="cap">{caption}</div></div>')
     if official:
-        by = "organizers' API" if official["source"] in ("score", "simulate") else "verified simulator"
-        score_cell = (f'<div class="cell" title="F {official["F"]:.1f} · C {official["C"]:.1f} · '
-                      f'L {official["L"]:.1f} · E {official["E"]:.1f} · {official["violations"]} violations">'
-                      f'<div class="ov">Official score</div><div class="score">{official["score"]:.2f}</div>'
-                      f'<div class="cap">{by}</div></div>')
-        orders_cell = cell("Orders fulfilled", f'{official["fulfilled"]}<span class="unit">/ {official["total"]}</span>',
-                           f'{official["late"]} late', "On time or up to 60 min late, from the simulator")
+        gain = official["score"] - baseline if baseline is not None else None
+        score_cap = (f"+{gain:.1f} vs simple greedy plan" if gain is not None and gain >= 0.05 else "out of 1,000")
+        score_cell = (f'<div class="cell" title="Fulfilled {official["F"]:.1f}% · cost {official["C"]:.1f}% · '
+                      f'loaded {official["L"]:.1f}% · CO₂ {official["E"]:.1f}%">'
+                      f'<div class="ov">Score</div><div class="score">{official["score"]:.1f}</div>'
+                      f'<div class="cap">{score_cap}</div></div>')
+        missed = official["total"] - official["fulfilled"]
+        orders_cell = cell("Orders delivered", f'{official["fulfilled"]}<span class="unit">/ {official["total"]}</span>',
+                           f'{official["late"]} late · {missed} not served', "On time or up to 60 min late")
     else:
-        score_cell = ('<div class="cell" title="The official score comes from the simulator or the organizers\' API">'
-                      '<div class="ov">Official score</div><div class="score">—</div><div class="cap">awaiting simulator</div></div>')
-        orders_cell = cell("Orders planned", f'{done}<span class="unit">/ {len(data["orders"])}</span>', "not yet official",
-                           "Orders this plan picks up and delivers. Official fulfillment comes from the simulator.")
+        score_cell = ('<div class="cell"><div class="ov">Score</div><div class="score">—</div>'
+                      '<div class="cap">not scored yet</div></div>')
+        orders_cell = cell("Orders planned", f'{done}<span class="unit">/ {len(data["orders"])}</span>', "&nbsp;",
+                           "Orders this plan picks up and delivers")
     html('<div class="ribbon lg">' + score_cell + orders_cell
-         + cell("Distance", f'{total_km:,}<span class="unit">km</span>', f"{used} of {len(data['trucks'])} trucks",
-                "Total km driven by all trucks, from the distance matrix")
-         + cell("Driven loaded", loaded, "official formula", "Share of km driven with at least one order on board")
-         + cell("Cost", f"€{cost:,.0f}", "local estimate", "km × each truck's €/km")
-         + cell("CO₂", f'{co2:,.0f}<span class="unit">kg</span>', "local estimate", "km × each truck's CO₂/km")
+         + cell("Distance", f'{total_km:,}<span class="unit">km</span>', f"{used} of {len(data['trucks'])} trucks used",
+                "Total km driven by all trucks")
+         + cell("Empty km", f'{empty_km:,}<span class="unit">km</span>', loaded_pct, "km driven with nothing on board")
+         + cell("Cost", f"€{cost:,.0f}", "est. from €/km", "km × each truck's €/km")
+         + cell("CO₂", f'{co2 / 1000:,.1f}<span class="unit">t</span>', "est. from CO₂/km", "km × each truck's CO₂/km")
          + "</div>")
 
 
@@ -692,26 +673,66 @@ def dock_head_html(title, meta):
 
 
 def fleet_list_html(data, analysis, colours, role, highlight=None):
+    """Busiest trucks first; trucks without orders are folded into one line at the end.
+    The dot colour is the truck's route colour on the map."""
+    empty = {"orders": 0, "km": 0, "loaded_km": 0, "peak_kg": 0, "cost": 0, "co2": 0}
+    stats = {tid: analysis.get(tid, empty) for tid in data["trucks"]}
+    busy = sorted((t for t in stats if stats[t]["orders"]), key=lambda t: (-stats[t]["orders"], -stats[t]["km"]))
+    idle = sorted(t for t in stats if not stats[t]["orders"])
     rows = ""
-    for tid, truck in sorted(data["trucks"].items()):
-        a = analysis.get(tid, {"orders": 0, "km": 0, "loaded_km": 0, "peak_kg": 0, "cost": 0, "co2": 0})
-        loaded = f"{100 * a['loaded_km'] / a['km']:.0f}% loaded" if a["km"] else "not used"
+    for tid in busy:
+        truck, a = data["trucks"][tid], stats[tid]
         if role == "Manager":          # managers care about money and emissions
             main = (f'<div class="body"><span class="strong">{escape(tid)}</span> <span class="muted">· {a["km"]:,} km</span></div>'
-                    f'<div class="cap">{loaded}</div>')
-            side = f'<div class="body strong">€{a["cost"]:,.0f}</div><div class="cap">{a["co2"]:,.0f} kg CO₂</div>'
+                    f'<div class="cap">{a["orders"]} orders · {escape(truck["type"])}</div>')
+            side = f'<div class="body strong">€{a["cost"]:,.0f}</div><div class="cap">{a["co2"] / 1000:,.1f} t CO₂</div>'
         else:
             peak = 100 * a["peak_kg"] / truck["capacity_kg"]
             main = (f'<div class="body"><span class="strong">{escape(tid)}</span> '
-                    f'<span class="muted">· {escape(truck["type"])} · {a["orders"]} orders</span></div>'
-                    f'<div class="cap">{a["km"]:,} km · {loaded}</div>')
+                    f'<span class="muted">· {a["orders"]} orders</span></div>'
+                    f'<div class="cap">{escape(truck["type"])} · {a["km"]:,} km</div>')
             side = (f'<div class="ov" style="font-size:0.6rem">Peak load</div>'
                     f'<div class="metric-line">{meter(a["peak_kg"], truck["capacity_kg"])}'
                     f'<span class="cap" style="width:32px;text-align:right">{peak:.0f}%</span></div>')
         rows += (f'<div class="row{" active" if tid == highlight else ""}">'
                  f'<span class="orb" style="--c:{colours[tid]}"></span><div class="main">{main}</div>'
                  f'<div class="side">{side}</div></div>')
+    if idle:
+        rows += (f'<div class="idle cap" title="Not needed in this plan">{len(idle)} truck{"s" if len(idle) != 1 else ""} '
+                 f'idle: {", ".join(escape(t) for t in idle)}</div>')
     html(f'<div class="list">{rows}</div>')
+
+
+def clock(minutes):
+    """Minutes from Day 1 06:00 -> 'Day 2 14:30'."""
+    t = 360 + int(minutes)
+    return f"Day {t // 1440 + 1} {t % 1440 // 60:02d}:{t % 60:02d}"
+
+
+def not_served_html(data, not_in_plan):
+    """Orders no truck delivers, with the facts that made them hard (truck type, time window, weight)."""
+    if not not_in_plan:
+        return
+    cities = data["cities"]
+    rows = ""
+    for o in sorted(not_in_plan, key=lambda o: o["id"]):
+        facts = [f"{o['weight_kg']:,} kg"]
+        if o.get("required_truck_type"):
+            facts.append(f"needs {o['required_truck_type']}")
+        if o.get("pickup_window"):
+            facts.append(f"pickup by {clock(o['pickup_window']['to'])}")
+        if o.get("delivery_window"):
+            start, end = clock(o["delivery_window"]["from"]), clock(o["delivery_window"]["to"])
+            same_day = start[:-6] == end[:-6]
+            facts.append(f"deliver {start}–{end[-5:] if same_day else end}")
+        rows += (f'<div class="row"><div class="main"><div class="body"><span class="strong">{escape(o["id"])}</span> '
+                 f'<span class="muted">· {escape(cities[o["pickup_city"]]["name"])} → '
+                 f'{escape(cities[o["delivery_city"]]["name"])}</span></div>'
+                 f'<div class="cap">{" · ".join(escape(f) for f in facts)}</div></div>'
+                 f'<div class="side"><div class="cap">value {o.get("value", 1):g}</div></div></div>')
+    html(f'<div class="section-head"><span class="ov" style="color:{RED}">Not served</span>'
+         f'<span class="cap">{len(not_in_plan)} order{"s" if len(not_in_plan) != 1 else ""}</span></div>'
+         f'<div class="list unserved">{rows}</div>')
 
 
 def identity_html(data, colours, tid, with_costs=False):
@@ -729,7 +750,8 @@ def numbers_html(data, analysis, tid):
     loaded = f"{100 * a['loaded_km'] / a['km']:.0f}%" if a["km"] else "—"
     cell = lambda k, v: f'<div><div class="ov">{k}</div><div class="vm">{v}</div></div>'
     html('<div class="grid3">'
-         + cell("Distance", f'{a["km"]:,}<span class="unit">km</span>') + cell("Driven loaded", loaded)
+         + cell("Distance", f'{a["km"]:,}<span class="unit">km</span>')
+         + cell("Empty km", f'{a["km"] - a["loaded_km"]:,}<span class="unit">km</span>')
          + cell("Peak load", f"{100 * a['peak_kg'] / truck['capacity_kg']:.0f}%")
          + cell("Cost", f"€{a['cost']:,.0f}") + cell("CO₂", f'{a["co2"]:,.0f}<span class="unit">kg</span>')
          + cell("Orders", f"{a['orders']}") + "</div>")
@@ -755,9 +777,8 @@ def timeline_html(data, analysis, colours, tid, done=None):
                   f'<div class="l2"><span class="body">{escape(s["City"])}</span><span class="load">'
                   f'{meter(s["Load (kg)"], truck["capacity_kg"])}<span class="cap">{compact(s["Load (kg)"])} kg</span>'
                   f'</span></div></div></div>')
-    note = ("Arrival times and lateness will appear once simulator results are connected." if done is None else "")
     html(f'<div class="section-head"><span class="ov">Stop sequence</span><span class="cap">{len(stops)} stops</span></div>'
-         f'{folded}<div class="timeline">{items}</div>' + (f'<div class="cap" style="margin-top:8px">{note}</div>' if note else ""))
+         f'{folded}<div class="timeline">{items}</div>')
 
 
 def next_up_html(data, analysis, tid, done):
@@ -783,16 +804,16 @@ def legend_html(show_unplanned=True, show_here=False):
             f'stroke="{CITY_RING}" stroke-width="1.5"/></svg>')
     ring = f'<svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="none" stroke="{RED}" stroke-width="2"/></svg>'
     here = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5" fill="{TEXT}" stroke="{ACCENT}" stroke-width="3"/></svg>'
-    html(f'<div class="legend lg"><span>{solid} Loaded</span><span>{dashed} Empty</span>'
-         f'<span><span style="color:{MUTED}">►</span> Direction</span><span>{city} City, size = orders</span>'
-         + (f'<span>{ring} Not in plan</span>' if show_unplanned else "")
+    html(f'<div class="legend"><span>{solid} With cargo</span><span>{dashed} Empty</span>'
+         f'<span>{city} City (bigger = more orders)</span>'
+         + (f'<span>{ring} Order not served</span>' if show_unplanned else "")
          + (f'<span>{here} You are here</span>' if show_here else "") + "</div>")
 
 
 # =============================================================================
 # 5. THE MAP
-#    Same routes and logic as app.py; Prism styling: pale tinted tiles,
-#    a pearlescent sheen, white casing and a soft glow under every route.
+#    Quiet CARTO basemap (OpenStreetMap data, few labels) so the routes stand out;
+#    white casing and a soft glow under every route.
 # =============================================================================
 def map_css():
     return f"""<style>
@@ -839,25 +860,27 @@ def curve_points(a, b, bend, steps=24):
     return points
 
 
-def build_map(data, analysis, not_in_plan, selected, show_names=True, show_unplanned=True,
-              only_selected=False, done_stops=None, here_city=None, pad_top=130, pad_right=DOCK_WIDTH + 70):
+def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
+              only_selected=False, done_stops=None, here_city=None):
     cities, colours = data["cities"], truck_colours(data)
     truck_number = {tid: i for i, tid in enumerate(sorted(data["trucks"]))}
     point = lambda cid: [cities[cid]["latitude"], cities[cid]["longitude"]]
 
     lats = [c["latitude"] for c in cities.values()]
     lons = [c["longitude"] for c in cities.values()]
-    m = folium.Map(location=[sum(lats) / len(lats), sum(lons) / len(lons)], zoom_start=6,
-                   tiles=MAP_TILES, attr=MAP_CREDIT)
-    m.get_root().header.add_child(folium.Element(
-        map_css() + f"<style>.leaflet-bottom.leaflet-right {{ right: {max(pad_right - 40, 0)}px; }}</style>"))
-    if only_selected and selected in analysis:          # driver view: zoom to this truck's own route
+    m = folium.Map(location=[sum(lats) / len(lats), sum(lons) / len(lons)], zoom_start=5,
+                   tiles=MAP_TILES, attr=MAP_CREDIT, zoom_snap=0.25)
+    m.get_root().header.add_child(folium.Element(map_css()))
+    # City names only along the selected truck's route; with all trucks shown they would pile up
+    # (hover any city for its name).
+    route = []
+    if selected in analysis:
         route = [data["trucks"][selected]["start_city"]] + [leg["to"] for leg in analysis[selected]["legs"]]
+    named = set(route)
+    if only_selected and route:                          # driver view: zoom to this truck's own route
         lats = [cities[c]["latitude"] for c in route]
         lons = [cities[c]["longitude"] for c in route]
-    # Keep the routes clear of the floating glass panels
-    m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]],
-                 padding_top_left=(70, pad_top), padding_bottom_right=(pad_right, 80))
+    m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]], padding=(30, 30))
 
     # Routes. The selected truck is drawn last so it sits on top.
     draw_order = [t for t in analysis if t != selected] + ([selected] if selected in analysis else [])
@@ -905,7 +928,7 @@ def build_map(data, analysis, not_in_plan, selected, show_names=True, show_unpla
             color=CITY_RING, weight=1.5, fill=True, fill_color=CITY_FILL, fill_opacity=0.55,
             tooltip=f"{c['name']} ({c['country']}): {pickups[cid]} pickups, {deliveries[cid]} deliveries",
         ).add_to(m)
-        if show_names:
+        if cid in named:
             folium.Marker(point(cid), icon=folium.DivIcon(
                 icon_size=(140, 18), icon_anchor=(-12, 22),
                 html=f'<div style="color:{LABEL_TEXT};font-size:12px;font-weight:600;white-space:nowrap;'
@@ -916,8 +939,8 @@ def build_map(data, analysis, not_in_plan, selected, show_names=True, show_unpla
     # Truck start labels: glossy pills in the truck colour
     stacked = {}
     for tid in analysis:
-        if only_selected and tid != selected:
-            continue
+        if (only_selected and tid != selected) or not analysis[tid]["legs"]:
+            continue                                   # idle trucks get no label: nothing to point at
         start = data["trucks"][tid]["start_city"]
         level = stacked.get(start, 0)
         stacked[start] = level + 1
@@ -964,16 +987,15 @@ def build_map(data, analysis, not_in_plan, selected, show_names=True, show_unpla
 # =============================================================================
 # 6. THE PAGE
 #    Streamlit runs this whole file top to bottom on every click.
-#    The header switch decides WHO is using the app; the sidebar decides WHAT they see.
+#    The role tabs in the header decide who is using the app, and so what they see.
 # =============================================================================
-st.set_page_config(page_title="Fleet Control Tower · Prism", page_icon="💠", layout="wide",
-                   initial_sidebar_state="collapsed")
+st.set_page_config(page_title=BRAND_NAME, page_icon="🚚", layout="wide", initial_sidebar_state="collapsed")
 
 if st.get_option("theme.base") != "light":
     st.warning("The light theme wasn't loaded. Start the app from the repo root: "
                "`python -m streamlit run dashboard/app.py`")
 
-# Theme: Light Prism by default. Remembered in the session (survives role and truck changes)
+# Theme: light by default. Remembered in the session (survives role and truck changes)
 # and in the page address (?theme=dark), so it also survives a page refresh.
 if "theme" not in st.session_state:
     st.session_state.theme = "dark" if st.query_params.get("theme") == "dark" else "light"
@@ -986,27 +1008,40 @@ def toggle_theme():
 
 apply_theme(st.session_state.theme)
 inject_css()
+html(f"""<style>
+  /* the data menu in the header looks like a status chip */
+  .st-key-data_menu [data-testid="stPopover"] button {{ border-radius: 999px; background: {INPUT_BG};
+        border: 1px solid {INPUT_BORDER}; box-shadow: {INPUT_SHADOW}; padding: 6px 14px; min-height: 0; }}
+  .st-key-data_menu [data-testid="stPopover"] button p {{ font-size: 0.8rem; font-weight: 600; color: {TEXT}; }}
+  .st-key-data_menu {{ display: flex; justify-content: flex-end; }}
+</style>""")
 
-# Remember the chosen view between clicks. First visit: Dispatcher, everything visible.
 if "role" not in st.session_state:
     st.session_state.role = "Dispatcher"
-    st.session_state.panels = list(ROLE_PRESETS["Dispatcher"])
 
+scenarios = list_scenarios()
+if not scenarios:
+    st.error(f"No scored plans in {DB_PATH}. Run ./run_all.sh from the repo root first.")
+    st.stop()
 
-def use_role_preset():
-    """Picking a role switches the panels to that role's ready-made set."""
-    st.session_state.panels = list(ROLE_PRESETS[st.session_state.role])
-
-
-# ---- Header: brand, role switch, status ------------------------------------------
+# ---- Header: brand · role tabs · data menu · status · theme --------------------------------
 with st.container(key="topbar"):
-    head_brand, head_role, head_chips, head_theme = st.columns([5, 3.3, 2.8, 0.45], vertical_alignment="center",
-                                                               gap="small")
+    head_brand, head_role, head_data, head_chips, head_theme = st.columns(
+        [4, 3.2, 1.9, 1.5, 0.45], vertical_alignment="center", gap="small")
 with head_brand:
     brand_html()
 with head_role:
-    st.segmented_control("View", list(ROLE_PRESETS), key="role", required=True,
-                         on_change=use_role_preset, label_visibility="collapsed")
+    st.segmented_control("View", list(ROLE_PRESETS), key="role", required=True, label_visibility="collapsed")
+with head_data:
+    with st.container(key="data_menu"):
+        current = st.session_state.get("scenario", scenarios[0])
+        with st.popover(current.replace("scenario_", "Scenario: "), icon=":material/database:"):
+            scenario = st.selectbox("Scenario", scenarios, key="scenario")
+            plans = list_plans(scenario)
+            if not plans:
+                st.warning(f"{scenario} has no plan yet: run `cd solver && python run.py {scenario}`.")
+                st.stop()
+            plan_file = st.selectbox("Plan (best score first)", plans, key="plan_file")
 with head_theme:
     going_to = "dark" if st.session_state.theme == "light" else "light"
     st.button("", key="theme_toggle", on_click=toggle_theme,
@@ -1015,59 +1050,25 @@ with head_theme:
 role = st.session_state.role
 is_driver = role == "Driver"
 
-# ---- Sidebar: display settings and data source -------------------------------------
-with st.sidebar:
-    html('<div class="h2">Display</div>')
-    st.caption(f"{role} view. {ROLE_DESCRIPTIONS[role]}")
-    with st.expander("Advanced display settings"):
-        st.pills("Show on screen", PANELS, selection_mode="multi", key="panels",
-                 help="Picking a role in the header gives a ready-made set. Fine-tune it here.")
-    st.divider()
-
-scenarios = list_scenarios()
-if not scenarios:
-    st.error(f"No scored plans in {DB_PATH}. Run ./run_all.sh from the repo root first.")
-    st.stop()
-
-# Drivers don't choose company data, so for them it is tucked away (but still there).
-data_box = st.sidebar.expander("Data source") if is_driver else st.sidebar.container()
-with data_box:
-    if not is_driver:
-        html('<div class="h2">Data source</div>')
-    scenario = st.selectbox("Scenario", scenarios, key="scenario")
-    plans = list_plans(scenario)
-    if not plans:
-        st.warning(f"{scenario} has no plan yet: run `cd solver && python run.py {scenario}`.")
-        st.stop()
-    plan_file = st.selectbox("Plan", plans, key="plan_file")
-    st.caption("Lines are schematic connections between cities, not road shapes; "
-               "km come from the distance matrix.")
-
 try:
     data = load_scenario(scenario)
     plan = load_plan(scenario, plan_file)
     official = load_official(scenario, plan_file)
 except Exception as error:                     # show a readable message instead of crashing
-    st.error(f"Couldn't read the data files: {error}")
+    st.error(f"Couldn't read the data: {error}")
     st.stop()
 
 analysis, not_in_plan, problems = analyse_plan(data, plan)
 colours = truck_colours(data)
-show = set(st.session_state.panels)
+show = set(ROLE_PRESETS[role])
 show_numbers = "Fleet numbers" in show
 show_map = "Map" in show
-dock_items = [p for p in ("Fleet table", "Truck details", "Stops") if p in show]
-show_dock = bool(dock_items)
 
 with head_chips:
-    chips_html(scenario, plan_file, problems, show_checks=show_numbers)
-
-if not (show_map or show_dock or show_numbers):
-    st.info("Nothing to show yet. Open the sidebar (» at the top left) and choose what to see.")
-    st.stop()
+    chips_html(problems, official)
 
 
-# ---- Driver progress: how many stops the driver has confirmed (same as app.py) -------------
+# ---- Driver progress: how many stops the driver has confirmed -------------------------------
 def progress_key(tid):
     return f"stops_done_{scenario}_{plan_file}_{tid}"    # separate progress per plan and truck
 
@@ -1080,107 +1081,92 @@ def stop_back(key):
     st.session_state[key] = max(st.session_state.get(key, 0) - 1, 0)
 
 
-# ---- Containers: the stage (map + floating glass) or a plain page without the map --------
-if show_map:
-    stage = st.container(key="stage")
-    with stage:
-        map_holder = st.container()                  # filled last, once the truck choice is known
-        if show_numbers:
-            with st.container(key="ribbon_slot"):
-                ribbon_html(data, analysis, not_in_plan, official)
-        dock = st.container(key="dock") if show_dock else st.container(key="picker")
-        legend_slot = st.container(key="legend_slot")
-else:
-    if show_numbers:
-        with st.container(key="ribbon_static"):
-            ribbon_html(data, analysis, not_in_plan, official)
-    dock = st.container(key="dock_static") if show_dock else None
+# ---- Layout: number strip, then map (left) + side panel (right); Manager: no map --------------
+if show_numbers:
+    with st.container(key="ribbon_slot"):
+        ribbon_html(data, analysis, not_in_plan, official, baseline_score(scenario))
 
+if show_map:
+    map_col, dock_col = st.columns([2.4, 1], gap="medium")
+    with map_col:
+        map_holder = st.container(key="mapbox")      # filled last, once the truck choice is known
+        legend_slot = st.container(key="legend_slot")
+    dock = dock_col.container(key="dock")
+else:
+    dock = st.container(key="dock_static")
+
+used_trucks = [t for t in sorted(analysis) if analysis[t]["orders"]]
 labels = {tid: f"{tid}  ·  {data['trucks'][tid]['type']}, {data['trucks'][tid]['capacity_kg']:,} kg"
           for tid in analysis}
-truck_options = sorted(analysis) if is_driver else ["All trucks"] + sorted(analysis)
+truck_options = used_trucks if is_driver else ["All trucks"] + used_trucks
 selected = None
 
-# ---- The dock: one glass surface; what is inside depends on the role -----------------------
-if dock is not None:
-    with dock:
-        head = st.empty()
-        choice = st.selectbox("Your truck" if is_driver else "Truck", truck_options, key=f"truck_{role}",
-                              format_func=lambda t: labels.get(t, t), label_visibility="collapsed")
-        selected = None if choice == "All trucks" else choice
-        if selected:                                   # the dock's light picks up the truck's colour
-            html(f"<style>.st-key-dock, .st-key-dock_static, .st-key-picker {{ --truck: {colours[selected]}; }}</style>")
-        done_stops = st.session_state.get(progress_key(selected), 0) if (is_driver and selected) else None
+# ---- Side panel: what is inside depends on the role -----------------------------------------
+with dock:
+    head = st.empty()
+    choice = st.selectbox("Your truck" if is_driver else "Truck", truck_options, key=f"truck_{role}",
+                          format_func=lambda t: labels.get(t, t), label_visibility="collapsed")
+    selected = None if choice == "All trucks" else choice
+    if selected:                                   # the panel's light picks up the truck's colour
+        html(f"<style>.st-key-dock, .st-key-dock_static, .st-key-picker {{ --truck: {colours[selected]}; }}</style>")
+    done_stops = st.session_state.get(progress_key(selected), 0) if (is_driver and selected) else None
+
+    if is_driver:
+        total = len(analysis[selected]["stops"])
+        meta = f"Stop {done_stops + 1} of {total}" if done_stops < total else f"All {total} stops done ✓"
+        head.markdown(f'<div class="dock-head"><div class="h2">Your route</div><div class="cap">{meta}</div></div>',
+                      unsafe_allow_html=True)
+    elif role == "Manager":
+        head.markdown('<div class="dock-head"><div class="h2">Fleet economics</div>'
+                      '<div class="cap">cost and CO₂ per truck</div></div>', unsafe_allow_html=True)
+    else:
+        n_orders = sum(t["orders"] for t in analysis.values())
+        head.markdown(f'<div class="dock-head"><div class="h2">Fleet</div>'
+                      f'<div class="cap">{len(used_trucks)} of {len(data["trucks"])} trucks · '
+                      f'{n_orders} orders</div></div>', unsafe_allow_html=True)
+
+    with st.container(key="dock_scroll"):
+        if problems and not is_driver:
+            with st.expander(f"⚠️ {len(problems)} rule problem(s), each violation costs 20 points"):
+                for p in problems:
+                    st.markdown(f"- {p}")
 
         if is_driver:
-            total = len(analysis[selected]["stops"])
-            meta = f"Stop {done_stops + 1} of {total}" if done_stops < total else f"All {total} stops done ✓"
-            head.markdown(f'<div class="dock-head"><div class="h2">Your route</div><div class="cap">{meta}</div></div>',
-                          unsafe_allow_html=True)
+            identity_html(data, colours, selected)
+            next_up_html(data, analysis, selected, done_stops)
+            html(f'<div class="progress"><i style="width:{100 * done_stops / max(total, 1):.0f}%"></i></div>')
+            back_col, done_col = st.columns([1, 1.5], gap="small")
+            key = progress_key(selected)
+            with back_col:
+                st.button("◀ Back", key=f"back_{selected}", on_click=stop_back, args=(key,),
+                          disabled=done_stops == 0, width="stretch")
+            with done_col:
+                st.button("✓ Stop done", key=f"done_{selected}", on_click=stop_done, args=(key, total),
+                          disabled=done_stops >= total, type="primary", width="stretch")
+            html('<div class="hair"></div>')
+            timeline_html(data, analysis, colours, selected, done=done_stops)
+
         elif role == "Manager":
-            head.markdown('<div class="dock-head"><div class="h2">Fleet economics</div>'
-                          '<div class="cap">cost and CO₂ per truck</div></div>', unsafe_allow_html=True)
-        else:
-            n_orders = sum(t["orders"] for t in analysis.values())
-            head.markdown(f'<div class="dock-head"><div class="h2">Fleet</div>'
-                          f'<div class="cap">{len(data["trucks"])} trucks · {n_orders} orders planned</div></div>',
-                          unsafe_allow_html=True)
+            # Fleet-wide first; one truck's details only on demand, underneath
+            fleet_list_html(data, analysis, colours, role, highlight=selected)
+            if selected:
+                html('<div class="hair"></div>')
+                identity_html(data, colours, selected, with_costs=True)
+                numbers_html(data, analysis, selected)
+            html('<div class="hair"></div>')
+            not_served_html(data, not_in_plan)
 
-        if show_dock:
-            with st.container(key="dock_scroll"):
-                if problems and show_numbers and not is_driver:
-                    with st.expander(f"⚠️ {len(problems)} rule problem(s), each official violation costs 20 points"):
-                        for p in problems:
-                            st.markdown(f"- {p}")
-
-                if is_driver:
-                    if "Truck details" in show:
-                        identity_html(data, colours, selected)
-                        next_up_html(data, analysis, selected, done_stops)
-                        html(f'<div class="progress"><i style="width:{100 * done_stops / max(total, 1):.0f}%"></i></div>')
-                        back_col, done_col = st.columns([1, 1.5], gap="small")
-                        key = progress_key(selected)
-                        with back_col:
-                            st.button("◀ Back", key=f"back_{selected}", on_click=stop_back, args=(key,),
-                                      disabled=done_stops == 0, width="stretch")
-                        with done_col:
-                            st.button("✓ Stop done", key=f"done_{selected}", on_click=stop_done, args=(key, total),
-                                      disabled=done_stops >= total, type="primary", width="stretch")
-                    if "Stops" in show:
-                        html('<div class="hair"></div>')
-                        timeline_html(data, analysis, colours, selected, done=done_stops)
-                    if "Fleet table" in show:
-                        html('<div class="hair"></div>')
-                        fleet_list_html(data, analysis, colours, role, highlight=selected)
-
-                elif role == "Manager":
-                    # Fleet-wide first; one truck's details only on demand, underneath
-                    if "Fleet table" in show:
-                        fleet_list_html(data, analysis, colours, role, highlight=selected)
-                    if selected and "Truck details" in show:
-                        html('<div class="hair"></div>')
-                        identity_html(data, colours, selected, with_costs=True)
-                        numbers_html(data, analysis, selected)
-                    if selected and "Stops" in show:
-                        html('<div class="hair"></div>')
-                        timeline_html(data, analysis, colours, selected)
-                    if not selected and ("Truck details" in show or "Stops" in show):
-                        html('<div class="cap">Choose a truck above to see its details.</div>')
-
-                else:   # Dispatcher
-                    wants_truck_info = "Truck details" in show or "Stops" in show
-                    if selected is None or not wants_truck_info:
-                        if "Fleet table" in show:
-                            fleet_list_html(data, analysis, colours, role)
-                        if wants_truck_info:
-                            html('<div class="cap">Choose a truck above to see its route, numbers and stops.</div>')
-                    else:
-                        if "Truck details" in show:
-                            identity_html(data, colours, selected)
-                            numbers_html(data, analysis, selected)
-                        if "Stops" in show:
-                            html('<div class="hair"></div>')
-                            timeline_html(data, analysis, colours, selected)
+        else:   # Dispatcher: the fleet and what is left over, or one truck's route
+            if selected is None:
+                fleet_list_html(data, analysis, colours, role)
+                if not_in_plan:
+                    html('<div class="hair"></div>')
+                    not_served_html(data, not_in_plan)
+            else:
+                identity_html(data, colours, selected)
+                numbers_html(data, analysis, selected)
+                html('<div class="hair"></div>')
+                timeline_html(data, analysis, colours, selected)
 
 # ---- The map ---------------------------------------------------------------------------
 if show_map:
@@ -1190,12 +1176,9 @@ if show_map:
         stop_cities = analysis[selected]["stop_cities"]
         here = data["trucks"][selected]["start_city"] if done_stops == 0 else stop_cities[done_stops - 1]
     with map_holder:
-        fleet_map = build_map(
-            data, analysis, not_in_plan, selected,
-            show_names="City names" in show, show_unplanned="Orders not in plan" in show,
-            only_selected=is_driver, done_stops=done_stops, here_city=here,
-            pad_top=130 if show_numbers else 50,
-            pad_right=(DOCK_WIDTH + 70) if show_dock else 360)
-        st_folium(fleet_map, height=600, use_container_width=True, returned_objects=[], key="prism_map")
+        fleet_map = build_map(data, analysis, not_in_plan, selected,
+                              show_unplanned="Orders not in plan" in show,
+                              only_selected=is_driver, done_stops=done_stops, here_city=here)
+        st_folium(fleet_map, height=640, use_container_width=True, returned_objects=[], key="prism_map")
     with legend_slot:
         legend_html(show_unplanned="Orders not in plan" in show, show_here=here is not None)

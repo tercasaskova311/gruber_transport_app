@@ -155,7 +155,7 @@ def load_instance(folder: str | Path) -> Instance:
 def list_db_scenarios() -> list[str]:
     """Every scenario in the DB's prep schema (database.load.list_scenarios)."""
     import settings  # noqa: F401,PLC0415  (puts the repo root on sys.path)
-    from ingestion import load as dl  # noqa: PLC0415
+    from data_layer import load as dl  # noqa: PLC0415
 
     con = dl.connect()
     try:
@@ -173,7 +173,7 @@ def load_from_db(scenario_id: str) -> Instance:
     fetch.py is writing). Imported here so the JSON route keeps working without duckdb.
     """
     import settings  # noqa: F401,PLC0415  (puts the repo root on sys.path)
-    from ingestion import load as dl  # noqa: PLC0415
+    from data_layer import load as dl  # noqa: PLC0415
 
     sid = str(scenario_id)
     con = dl.connect()

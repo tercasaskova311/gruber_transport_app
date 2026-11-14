@@ -37,7 +37,7 @@ def v_route7d(inst: Instance) -> None:
 def v_prune(inst: Instance) -> None:
     """Drop order-truck pairs that can't be on time (<= 60 min late) even carrying nothing else.
     Exact: prep's alone_* times are lower bounds (start at minute 0, drive straight, no breaks)."""
-    from ingestion import load as dl
+    from data_layer import load as dl
     con = dl.connect()
     try:
         ok = con.execute("""SELECT order_pos, truck_pos FROM prep.order_truck_options
@@ -81,7 +81,7 @@ def run_one(scenario: str, variant: str, seed: int, time_limit: float, experimen
 
 # ---------------------------------------------------------------- report
 def report(experiment: str, baseline: str = "baseline") -> None:
-    from ingestion import load as dl
+    from data_layer import load as dl
     con = dl.connect()
     try:
         rows = con.execute("""
