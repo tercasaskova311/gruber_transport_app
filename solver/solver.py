@@ -382,7 +382,8 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
          sigma=(33.0, 9.0, 13.0), t_start_pct: float = 0.005, t_end: float = 0.01,
          verbose: bool = True, max_iters: int | None = None,
          eject: bool = False, eject_every: int = 50, eject_share: float = 0.25,
-         block: bool = False) -> tuple[Solution, ALNSLog]:
+         block: bool = False, protect: set[int] | None = None,
+         protect_release: float = 0.0) -> tuple[Solution, ALNSLog]:
     """Adaptive Large Neighbourhood Search (Ropke & Pisinger 2006) on the exact score.
 
     - destroy q orders, repair with ΔS insertion (all unassigned orders are retried too)
@@ -444,6 +445,8 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
         first = []
         if isinstance(removed, tuple):       # operator names unserved orders to insert first
             removed, first = removed
+        if protect:                          # protected orders leave their truck only with prob. protect_release
+            removed = [o for o in removed if o not in protect or rng.random() < protect_release]
         remove_orders(inst, cand, removed)
         if first:
             insert_orders(inst, cand, first, rng, regret=1, topk=4 * topk, max_trucks=None)

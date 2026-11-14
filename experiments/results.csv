@@ -151,3 +151,53 @@ when,branch,sha,dirty,config,set,scenario,snapshot,seed,time,score,fulfillment,c
 2026-11-14 03:15,algo/loaded,7ee2d47,no,loaded,fake,fake_comp_b,,1,60.0,901.9304,80.9009,100.0,98.2841,100.0,172,200,204.6792,253.0,28,0,188,72.7,901.9304,loaded (3 scenarios)
 2026-11-14 03:15,algo/loaded,7ee2d47,no,loaded,fake,fake_comp_b,,2,60.0,903.8333,81.1413,100.0,98.7512,100.0,173,200,205.2875,253.0,27,0,201,74.6,903.8333,loaded (3 scenarios)
 2026-11-14 03:15,algo/loaded,7ee2d47,no,loaded,fake,fake_comp_b,,3,60.0,905.3802,81.39,100.0,98.9535,100.0,172,200,205.9167,253.0,28,0,300,74.2,905.3802,loaded (3 scenarios)
+2026-11-14 03:41,algo/tw-first,cec1039,no,tw-first,real,big,20261113_192945,1,60.0,969.8673,94.4828,100.0,98.3024,100.0,115,120,137.0,145.0,5,0,631,65.0,969.8673,tw-first hard (3 scenarios)
+2026-11-14 03:41,algo/tw-first,cec1039,no,tw-first,real,big,20261113_192945,2,60.0,971.5969,94.4828,100.0,99.4554,100.0,115,120,137.0,145.0,5,0,694,65.0,971.5969,tw-first hard (3 scenarios)
+2026-11-14 03:41,algo/tw-first,cec1039,no,tw-first,real,big,20261113_192945,3,60.0,971.6769,94.4828,100.0,99.5088,100.0,115,120,137.0,145.0,5,0,815,65.8,971.6769,tw-first hard (3 scenarios)
+2026-11-14 03:41,algo/tw-first,cec1039,no,tw-first,real,competitive,20261113_192945,1,60.0,931.83,86.6089,99.9988,99.1919,100.0,179,200,218.6875,252.5,21,0,625,76.0,931.83,tw-first hard (3 scenarios)
+2026-11-14 03:41,algo/tw-first,cec1039,no,tw-first,real,competitive,20261113_192945,2,60.0,928.8905,86.0149,100.0,99.2108,100.0,178,200,217.1875,252.5,22,0,590,75.1,928.8905,tw-first hard (3 scenarios)
+2026-11-14 03:41,algo/tw-first,cec1039,no,tw-first,real,competitive,20261113_192945,3,60.0,925.7913,85.5446,100.0,98.7123,100.0,177,200,216.0,252.5,23,0,506,77.6,925.7913,tw-first hard (3 scenarios)
+2026-11-14 03:41,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_a,,1,60.0,893.0452,78.9091,100.0,98.9998,100.0,167,200,200.4292,254.0,33,0,189,97.3,893.0452,tw-first hard (3 scenarios)
+2026-11-14 03:41,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_a,,2,60.0,893.8065,78.9731,100.0,99.294,100.0,167,200,200.5917,254.0,33,0,159,96.0,893.8065,tw-first hard (3 scenarios)
+2026-11-14 03:41,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_a,,3,60.0,897.9327,79.7605,100.0,99.4201,100.0,168,200,202.5917,254.0,32,0,147,94.1,897.9327,tw-first hard (3 scenarios)
+2026-11-14 03:48,algo/tw-first,cec1039,no,tw-first-soft,real,big,20261113_192945,1,60.0,970.7982,94.3276,100.0,99.4402,100.0,115,120,136.775,145.0,5,0,371,72.5,970.7982,tw-first soft (3 scenarios)
+2026-11-14 03:48,algo/tw-first,cec1039,no,tw-first-soft,real,big,20261113_192945,2,60.0,970.9412,94.3276,100.0,99.5355,100.0,115,120,136.775,145.0,5,0,334,72.2,970.9412,tw-first soft (3 scenarios)
+2026-11-14 03:48,algo/tw-first,cec1039,no,tw-first-soft,real,big,20261113_192945,3,60.0,971.6018,94.4828,100.0,99.4587,100.0,115,120,137.0,145.0,5,0,375,67.6,971.6018,tw-first soft (3 scenarios)
+2026-11-14 03:48,algo/tw-first,cec1039,no,tw-first-soft,real,competitive,20261113_192945,1,60.0,926.4283,85.4208,100.0,99.5495,100.0,177,200,215.6875,252.5,23,0,271,86.0,926.4283,tw-first soft (3 scenarios)
+2026-11-14 03:48,algo/tw-first,cec1039,no,tw-first-soft,real,competitive,20261113_192945,2,60.0,928.7378,86.0149,100.0,99.109,100.0,178,200,217.1875,252.5,22,0,450,86.1,928.7378,tw-first soft (3 scenarios)
+2026-11-14 03:48,algo/tw-first,cec1039,no,tw-first-soft,real,competitive,20261113_192945,3,60.0,929.1291,86.099,100.0,99.0894,100.0,178,200,217.4,252.5,22,0,519,82.0,929.1291,tw-first soft (3 scenarios)
+2026-11-14 03:48,algo/tw-first,cec1039,no,tw-first-soft,fake,fake_comp_a,,1,60.0,896.968,79.5636,100.0,99.4331,100.0,168,200,202.0917,254.0,32,0,134,96.9,896.968,tw-first soft (3 scenarios)
+2026-11-14 03:48,algo/tw-first,cec1039,no,tw-first-soft,fake,fake_comp_a,,2,60.0,893.6574,78.9239,100.0,99.3587,100.0,167,200,200.4667,254.0,33,0,139,105.3,893.6574,tw-first soft (3 scenarios)
+2026-11-14 03:48,algo/tw-first,cec1039,no,tw-first-soft,fake,fake_comp_a,,3,60.0,897.7587,79.7949,100.0,99.1893,100.0,168,200,202.6792,254.0,32,0,300,95.9,897.7587,tw-first soft (3 scenarios)
+2026-11-14 03:51,algo/tw-first,cec1039,no,default,real,competitive,20261113_192945,4,60.0,924.4067,85.3465,100.0,98.4494,100.0,177,200,215.5,252.5,23,0,316,67.3,924.4067,best: competitive seeds 4-8
+2026-11-14 03:51,algo/tw-first,cec1039,no,default,real,competitive,20261113_192945,5,60.0,921.2073,84.495,100.0,99.1547,100.0,176,200,213.35,252.5,24,0,439,67.2,921.2073,best: competitive seeds 4-8
+2026-11-14 03:51,algo/tw-first,cec1039,no,default,real,competitive,20261113_192945,6,60.0,919.3761,84.2624,100.0,98.7095,100.0,176,200,212.7625,252.5,24,0,382,67.8,919.3761,best: competitive seeds 4-8
+2026-11-14 03:51,algo/tw-first,cec1039,no,default,real,competitive,20261113_192945,7,60.0,924.5804,85.2228,100.0,98.9777,100.0,177,200,215.1875,252.5,23,0,400,68.3,924.5804,best: competitive seeds 4-8
+2026-11-14 03:51,algo/tw-first,cec1039,no,default,real,competitive,20261113_192945,8,60.0,924.0335,85.1733,100.0,98.7781,100.0,177,200,215.0625,252.5,23,0,611,67.7,924.0335,best: competitive seeds 4-8
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,real,middle,20261113_192945,1,60.0,996.4235,100.0,100.0,97.6157,100.0,50,50,59.0,59.0,0,0,4849,60.8,996.4235,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,real,middle,20261113_192945,2,60.0,996.3733,100.0,100.0,97.5822,100.0,50,50,59.0,59.0,0,0,4760,60.8,996.3733,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,real,middle,20261113_192945,3,60.0,996.3641,100.0,100.0,97.576,100.0,50,50,59.0,59.0,0,0,5421,61.1,996.3641,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,real,small,20261113_192945,1,60.0,1000.0,100.0,100.0,100.0,100.0,20,20,20.0,20.0,0,0,17374,48.6,1000.0,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,real,small,20261113_192945,2,60.0,1000.0,100.0,100.0,100.0,100.0,20,20,20.0,20.0,0,0,17750,48.4,1000.0,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,real,small,20261113_192945,3,60.0,1000.0,100.0,100.0,100.0,100.0,20,20,20.0,20.0,0,0,16837,48.4,1000.0,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,fake,fake_big_a,,1,60.0,926.7402,85.3827,100.0,99.8846,100.0,107,120,125.5125,147.0,13,0,351,68.8,926.7402,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,fake,fake_big_a,,2,60.0,926.7416,85.3827,100.0,99.8856,100.0,107,120,125.5125,147.0,13,0,332,66.0,926.7416,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,fake,fake_big_a,,3,60.0,926.7451,85.3827,100.0,99.8879,100.0,107,120,125.5125,147.0,13,0,345,68.8,926.7451,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_b,,1,60.0,904.9788,81.4279,100.0,98.5596,100.0,173,200,206.0125,253.0,27,0,297,84.0,904.9788,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_b,,2,60.0,905.0027,81.4279,100.0,98.5756,100.0,173,200,206.0125,253.0,27,0,267,78.7,905.0027,tw-first hard (other 4 scenarios)
+2026-11-14 03:58,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_b,,3,60.0,907.0702,81.9269,100.0,98.2905,100.0,173,200,207.275,253.0,27,0,344,79.6,907.0702,tw-first hard (other 4 scenarios)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,real,competitive,20261113_192945,4,60.0,925.4356,85.4505,100.0,98.7888,100.0,177,200,215.7625,252.5,23,0,374,72.8,925.4356,tw-first hard (seeds 4-8)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,real,competitive,20261113_192945,5,60.0,928.3383,86.0446,100.0,98.7437,100.0,178,200,217.2625,252.5,22,0,365,72.8,928.3383,tw-first hard (seeds 4-8)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,real,competitive,20261113_192945,6,60.0,931.6499,86.6089,100.0,99.0702,100.0,179,200,218.6875,252.5,21,0,503,71.5,931.6499,tw-first hard (seeds 4-8)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,real,competitive,20261113_192945,7,60.0,925.1133,85.4505,100.0,98.5739,100.0,177,200,215.7625,252.5,23,0,454,71.6,925.1133,tw-first hard (seeds 4-8)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,real,competitive,20261113_192945,8,60.0,927.9772,86.0446,100.0,98.503,100.0,178,200,217.2625,252.5,22,0,427,77.1,927.9772,tw-first hard (seeds 4-8)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_a,,4,60.0,894.0251,78.9731,100.0,99.4398,100.0,167,200,200.5917,254.0,33,0,250,91.1,894.0251,tw-first hard (seeds 4-8)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_a,,5,60.0,896.3911,79.5636,100.0,99.0486,100.0,168,200,202.0917,254.0,32,0,234,83.1,896.3911,tw-first hard (seeds 4-8)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_a,,6,60.0,897.0094,79.5636,100.0,99.4607,100.0,168,200,202.0917,254.0,32,0,214,89.7,897.0094,tw-first hard (seeds 4-8)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_a,,7,60.0,893.5756,78.9091,100.0,99.3533,100.0,167,200,200.4292,254.0,33,0,171,87.0,893.5756,tw-first hard (seeds 4-8)
+2026-11-14 04:05,algo/tw-first,cec1039,no,tw-first,fake,fake_comp_a,,8,60.0,898.6825,79.8589,100.0,99.5919,100.0,168,200,202.8417,254.0,32,0,296,93.3,898.6825,tw-first hard (seeds 4-8)
+2026-11-14 04:09,algo/tw-first,cec1039,no,default,fake,fake_comp_a,,4,60.0,897.5208,79.539,100.0,99.8838,100.0,167,200,202.0292,254.0,33,0,223,83.8,897.5208,best: fake_comp_a seeds 4-8
+2026-11-14 04:09,algo/tw-first,cec1039,no,default,fake,fake_comp_a,,5,60.0,897.6948,79.6621,100.0,99.5896,100.0,168,200,202.3417,254.0,32,0,250,86.6,897.6948,best: fake_comp_a seeds 4-8
+2026-11-14 04:09,algo/tw-first,cec1039,no,default,fake,fake_comp_a,,6,60.0,898.673,79.8589,100.0,99.5856,100.0,168,200,202.8417,254.0,32,0,281,82.9,898.673,best: fake_comp_a seeds 4-8
+2026-11-14 04:09,algo/tw-first,cec1039,no,default,fake,fake_comp_a,,7,60.0,898.7145,80.0804,100.0,98.8751,100.0,168,200,203.4042,254.0,32,0,266,81.7,898.7145,best: fake_comp_a seeds 4-8
+2026-11-14 04:09,algo/tw-first,cec1039,no,default,fake,fake_comp_a,,8,60.0,896.986,79.5636,100.0,99.4452,100.0,168,200,202.0917,254.0,32,0,346,73.1,896.986,best: fake_comp_a seeds 4-8

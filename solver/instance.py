@@ -69,6 +69,9 @@ class Instance:
     direct_km_total: float = 0.0
     min_cost_per_km: float = 0.0
     min_co2_per_km: float = 0.0
+    # sub-problems (twfirst.py): judge plans by value served minus a small km penalty, not by the score
+    value_only: bool = False
+    km_weight: float = 0.0
     M: list[list[int]] = field(default_factory=list)   # driving minutes, ceil(km * 60 / 70)
 
     @property
