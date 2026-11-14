@@ -81,9 +81,9 @@ THEMES = {
         FLOAT_BG="rgba(248,250,252,0.93)",
         MAP_TILES=_OSM_TILES, MAP_BG="#EEF1F2",
         MAP_TINT="none",                                # OSM in its full colours
-        ROUTE_INK="#F2620F", ROUTE_BLEND="normal", ROUTE_GLOW=False,     # white edge keeps crossings clean
-        # load on board 0-20 %, ..., 80-100 %: yellow -> deep orange (no red: red = unserved orders)
-        LOAD_RAMP=["#F5C400", "#F7AE0A", "#F59610", "#F27C14", "#E8620E"],
+        ROUTE_INK="#2160C4", ROUTE_BLEND="normal", ROUTE_GLOW=False,     # white edge keeps crossings clean
+        # load on board 0-20 %, ..., 80-100 %: light blue -> deep blue (fuller = darker)
+        LOAD_RAMP=["#9CC3F5", "#6FA3EE", "#3F7FE0", "#2160C4", "#173F91"],
         TRUCK_ICON="#232733", TRUCK_ICON_EDGE="#FFFFFF",
         MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(255,255,255,0.82)", MAP_CONTROL_LINE="rgba(39,43,51,0.08)",
@@ -135,9 +135,9 @@ THEMES = {
         FLOAT_BG="rgba(38,31,60,0.94)",
         MAP_TILES=_OSM_TILES, MAP_BG="#1E1830",
         MAP_TINT="brightness(0.7) contrast(1.05)",      # OSM in full colour, dimmed for dark mode
-        ROUTE_INK="#FF8A3D", ROUTE_BLEND="screen", ROUTE_GLOW=True,      # overlaps glow brighter, like Strava
-        # load on board 0-20 %, ..., 80-100 %: yellow -> orange (no red: red = unserved orders)
-        LOAD_RAMP=["#FDE047", "#FCCB3A", "#FBB12E", "#FB9524", "#F97A1A"],
+        ROUTE_INK="#5F9BFF", ROUTE_BLEND="screen", ROUTE_GLOW=True,      # overlaps glow brighter, like Strava
+        # load on board 0-20 %, ..., 80-100 %: deep blue -> bright ice blue (fuller = brighter on the dark map)
+        LOAD_RAMP=["#1E3A8A", "#2A55C0", "#3B76E8", "#5F9BFF", "#9CC5FF"],
         TRUCK_ICON="#F4F1FA", TRUCK_ICON_EDGE="#14111F",
         MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(52,43,74,0.88)", MAP_CONTROL_LINE="rgba(255,255,255,0.10)",
