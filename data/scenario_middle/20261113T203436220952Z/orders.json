@@ -1,0 +1,532 @@
+[
+ {
+  "id": "O001",
+  "pickup_city": "C120",
+  "delivery_city": "C014",
+  "weight_kg": 2700,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O002",
+  "pickup_city": "C045",
+  "delivery_city": "C120",
+  "weight_kg": 8500,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O003",
+  "pickup_city": "C107",
+  "delivery_city": "C011",
+  "weight_kg": 7400,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O004",
+  "pickup_city": "C120",
+  "delivery_city": "C053",
+  "weight_kg": 9400,
+  "required_truck_type": "hazmat",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O005",
+  "pickup_city": "C018",
+  "delivery_city": "C066",
+  "weight_kg": 6600,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O006",
+  "pickup_city": "C120",
+  "delivery_city": "C060",
+  "weight_kg": 6000,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": {
+   "from": 525,
+   "to": 795
+  },
+  "value": 1.5
+ },
+ {
+  "id": "O007",
+  "pickup_city": "C024",
+  "delivery_city": "C066",
+  "weight_kg": 4500,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O008",
+  "pickup_city": "C045",
+  "delivery_city": "C060",
+  "weight_kg": 5400,
+  "required_truck_type": "hazmat",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O009",
+  "pickup_city": "C018",
+  "delivery_city": "C066",
+  "weight_kg": 5500,
+  "required_truck_type": "hazmat",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O010",
+  "pickup_city": "C024",
+  "delivery_city": "C118",
+  "weight_kg": 9300,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O011",
+  "pickup_city": "C008",
+  "delivery_city": "C018",
+  "weight_kg": 2600,
+  "required_truck_type": null,
+  "pickup_window": {
+   "from": 150,
+   "to": 300
+  },
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O012",
+  "pickup_city": "C062",
+  "delivery_city": "C130",
+  "weight_kg": 3400,
+  "required_truck_type": "hazmat",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O013",
+  "pickup_city": "C011",
+  "delivery_city": "C062",
+  "weight_kg": 6600,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O014",
+  "pickup_city": "C024",
+  "delivery_city": "C066",
+  "weight_kg": 6400,
+  "required_truck_type": "refrigerated",
+  "pickup_window": {
+   "from": 405,
+   "to": 540
+  },
+  "delivery_window": {
+   "from": 810,
+   "to": 960
+  },
+  "value": 2
+ },
+ {
+  "id": "O015",
+  "pickup_city": "C048",
+  "delivery_city": "C045",
+  "weight_kg": 2300,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O016",
+  "pickup_city": "C118",
+  "delivery_city": "C045",
+  "weight_kg": 4700,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O017",
+  "pickup_city": "C062",
+  "delivery_city": "C008",
+  "weight_kg": 3400,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O018",
+  "pickup_city": "C014",
+  "delivery_city": "C080",
+  "weight_kg": 5300,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O019",
+  "pickup_city": "C022",
+  "delivery_city": "C045",
+  "weight_kg": 4700,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O020",
+  "pickup_city": "C022",
+  "delivery_city": "C049",
+  "weight_kg": 8500,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O021",
+  "pickup_city": "C107",
+  "delivery_city": "C080",
+  "weight_kg": 2700,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": {
+   "from": 225,
+   "to": 405
+  },
+  "value": 1.5
+ },
+ {
+  "id": "O022",
+  "pickup_city": "C008",
+  "delivery_city": "C118",
+  "weight_kg": 5400,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O023",
+  "pickup_city": "C011",
+  "delivery_city": "C014",
+  "weight_kg": 5600,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O024",
+  "pickup_city": "C049",
+  "delivery_city": "C118",
+  "weight_kg": 1400,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O025",
+  "pickup_city": "C126",
+  "delivery_city": "C018",
+  "weight_kg": 1400,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O026",
+  "pickup_city": "C010",
+  "delivery_city": "C130",
+  "weight_kg": 9100,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O027",
+  "pickup_city": "C010",
+  "delivery_city": "C011",
+  "weight_kg": 1700,
+  "required_truck_type": "refrigerated",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O028",
+  "pickup_city": "C107",
+  "delivery_city": "C024",
+  "weight_kg": 1700,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O029",
+  "pickup_city": "C080",
+  "delivery_city": "C048",
+  "weight_kg": 900,
+  "required_truck_type": "refrigerated",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O030",
+  "pickup_city": "C045",
+  "delivery_city": "C107",
+  "weight_kg": 2100,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O031",
+  "pickup_city": "C014",
+  "delivery_city": "C130",
+  "weight_kg": 600,
+  "required_truck_type": "refrigerated",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O032",
+  "pickup_city": "C048",
+  "delivery_city": "C008",
+  "weight_kg": 5200,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O033",
+  "pickup_city": "C010",
+  "delivery_city": "C011",
+  "weight_kg": 7800,
+  "required_truck_type": "hazmat",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O034",
+  "pickup_city": "C080",
+  "delivery_city": "C130",
+  "weight_kg": 7500,
+  "required_truck_type": "hazmat",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O035",
+  "pickup_city": "C130",
+  "delivery_city": "C045",
+  "weight_kg": 8500,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O036",
+  "pickup_city": "C060",
+  "delivery_city": "C048",
+  "weight_kg": 4200,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O037",
+  "pickup_city": "C022",
+  "delivery_city": "C062",
+  "weight_kg": 8200,
+  "required_truck_type": null,
+  "pickup_window": {
+   "from": 90,
+   "to": 270
+  },
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O038",
+  "pickup_city": "C060",
+  "delivery_city": "C045",
+  "weight_kg": 8400,
+  "required_truck_type": null,
+  "pickup_window": {
+   "from": 345,
+   "to": 465
+  },
+  "delivery_window": {
+   "from": 870,
+   "to": 1020
+  },
+  "value": 1.5
+ },
+ {
+  "id": "O039",
+  "pickup_city": "C008",
+  "delivery_city": "C066",
+  "weight_kg": 1600,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O040",
+  "pickup_city": "C066",
+  "delivery_city": "C022",
+  "weight_kg": 3000,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O041",
+  "pickup_city": "C022",
+  "delivery_city": "C118",
+  "weight_kg": 9600,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O042",
+  "pickup_city": "C066",
+  "delivery_city": "C024",
+  "weight_kg": 8800,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O043",
+  "pickup_city": "C049",
+  "delivery_city": "C010",
+  "weight_kg": 8100,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O044",
+  "pickup_city": "C107",
+  "delivery_city": "C011",
+  "weight_kg": 500,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O045",
+  "pickup_city": "C018",
+  "delivery_city": "C008",
+  "weight_kg": 2100,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O046",
+  "pickup_city": "C060",
+  "delivery_city": "C022",
+  "weight_kg": 8100,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O047",
+  "pickup_city": "C120",
+  "delivery_city": "C126",
+  "weight_kg": 3400,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O048",
+  "pickup_city": "C053",
+  "delivery_city": "C107",
+  "weight_kg": 700,
+  "required_truck_type": "hazmat",
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1.5
+ },
+ {
+  "id": "O049",
+  "pickup_city": "C011",
+  "delivery_city": "C060",
+  "weight_kg": 4600,
+  "required_truck_type": null,
+  "pickup_window": null,
+  "delivery_window": null,
+  "value": 1
+ },
+ {
+  "id": "O050",
+  "pickup_city": "C118",
+  "delivery_city": "C080",
+  "weight_kg": 1300,
+  "required_truck_type": null,
+  "pickup_window": {
+   "from": 360,
+   "to": 555
+  },
+  "delivery_window": {
+   "from": 1530,
+   "to": 1755
+  },
+  "value": 1.5
+ }
+]

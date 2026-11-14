@@ -1,0 +1,7 @@
+{
+ "id": "scenario_middle",
+ "name": "Middle",
+ "cities_count": 20,
+ "trucks_count": 8,
+ "orders_count": 50
+}

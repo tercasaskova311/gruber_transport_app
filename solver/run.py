@@ -66,10 +66,10 @@ def solve(inst: Instance, out: Path, time_limit: float, seed: int, quiet: bool) 
 
 
 def save_to_results(inst: Instance, plans: dict[str, dict], params: dict) -> None:
-    """Score each plan with the verified simulator and store it in results.* (data_layer)."""
+    """Score each plan with the verified simulator and store it in results.* (database)."""
     from types import SimpleNamespace
 
-    from data_layer import load as dl                          # noqa: PLC0415
+    from ingestion import load as dl                          # noqa: PLC0415
     from gruber import loader, simulator                       # noqa: PLC0415
 
     con = dl.connect(read_only=False)

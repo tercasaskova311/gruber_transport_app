@@ -16,8 +16,6 @@ Solver only (defaults in [`settings.py`](settings.py), flags override them):
 python run.py                                     # all scenarios from the DuckDB (prep.* tables)
 python run.py scenario_big --time 300 --seed 1    # one scenario
 python run.py ../data/scenario_big/<ts> --source json            # a JSON folder instead
-python make_fake_scenario.py --preset competitive --out data/fake_competitive
-python run.py data/fake_competitive --source json                # offline test data
 ```
 
 With the DB source, data comes from `instance.load_from_db()`, which builds the same `Instance` as

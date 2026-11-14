@@ -9,15 +9,14 @@ driver progress.
 
 How this file is organised:
   1. Design tokens       colours, type scale, radii, sizes, role presets
-  2. Loading data        identical to app.py (plus: finds the shared data folder one level up)
+  2. Loading data        scenarios and plans from the team's DuckDB (data/hackathon.duckdb)
   3. Route calculations  identical to app.py
   4. Glass components    header, ribbon, dock sections, stop timeline, legend
   5. The map             pale pearlescent tiles, glowing routes
   6. The page            role-based layout
 
-Run it from INSIDE the prism folder, so its light theme is used:
-    cd prism
-    py -m streamlit run app_prism.py --server.port 8503
+Run it from the repo root (the theme is in .streamlit/config.toml there):
+    python -m streamlit run dashboard/app.py
 """
 
 import json
@@ -191,45 +190,88 @@ ROLE_DESCRIPTIONS = {
 #    official API formats: cities.json, trucks.json, orders.json,
 #    distance_matrix.json, plus one or more plan files named plan*.json.
 # =============================================================================
-HERE = Path(__file__).resolve().parent         # full path, so "one folder up" works however it is started
-DATA_DIR = HERE / "data"
-if not DATA_DIR.exists():                     # the prototype lives in a subfolder: use the shared data
-    DATA_DIR = HERE.parent / "data"
-REQUIRED_FILES = ["cities.json", "trucks.json", "orders.json", "distance_matrix.json"]
+HERE = Path(__file__).resolve().parent
+# The team's DuckDB (built by database/run_all.sh, plans added by solver/run.py).
+# Scenarios come from raw.cur_* (the API JSON as fetched), plans from results.runs.
+DB_PATH = HERE.parent / "data" / "hackathon.duckdb"
+MAX_RUNS = 40                                 # plans listed per scenario, best score first
 
 
-def read_json(path):
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
+def _db():
+    import duckdb
+    return duckdb.connect(str(DB_PATH), read_only=True)
 
 
+@st.cache_data(ttl=30)                        # re-read every 30 s, so new solver runs show up
 def list_scenarios():
-    """Every folder inside data/ that contains a cities.json file."""
-    if not DATA_DIR.exists():
+    """Every scenario that has at least one scored plan in results.runs."""
+    if not DB_PATH.exists():
         return []
-    return sorted(p.name for p in DATA_DIR.iterdir()
-                  if p.is_dir() and (p / "cities.json").exists())
+    with _db() as con:
+        return [r[0] for r in con.execute("SELECT DISTINCT scenario_id FROM results.runs ORDER BY 1").fetchall()]
+
+
+@st.cache_data(ttl=30)
+def _runs(scenario):
+    with _db() as con:
+        return con.execute("""
+            SELECT run_id, algo, source, score, orders_fulfilled, orders_total, n_violations,
+                   strftime(created_at, '%d %b %H:%M'), params_json->>'experiment'
+            FROM results.runs WHERE scenario_id = ?
+            ORDER BY n_violations = 0 DESC, score DESC LIMIT ?""", [scenario, MAX_RUNS]).fetchall()
+
+
+def _run_label(r):
+    run_id, algo, source, score, done, total, viol, when, exp = r
+    tags = " · ".join(x for x in (algo, exp, "API" if source in ("score", "simulate") else None) if x)
+    warn = f" · {viol} violations" if viol else ""
+    return f"{score:.2f} · {done}/{total} orders · {tags} · {when}{warn} · {run_id}"
+
+
+def _run_id(plan_label):
+    return plan_label.rsplit(" · ", 1)[-1]
 
 
 def list_plans(scenario):
-    return sorted(p.name for p in (DATA_DIR / scenario).glob("plan*.json"))
+    return [_run_label(r) for r in _runs(scenario)]
 
 
+@st.cache_data(ttl=300)
 def load_scenario(scenario):
-    folder = DATA_DIR / scenario
-    missing = [name for name in REQUIRED_FILES if not (folder / name).exists()]
-    if missing:
-        raise FileNotFoundError(f"data/{scenario} is missing: {', '.join(missing)}")
+    with _db() as con:
+        def objs(table):
+            return [json.loads(r[0]) for r in con.execute(
+                f"SELECT raw_json FROM raw.cur_{table} WHERE scenario_id = ? ORDER BY id", [scenario]).fetchall()]
+        dist = {}
+        for a, b, km in con.execute("SELECT from_city, to_city, km FROM raw.cur_distances "
+                                    "WHERE scenario_id = ?", [scenario]).fetchall():
+            dist.setdefault(a, {})[b] = int(km) if km == int(km) else km
+        cities, trucks, orders = objs("cities"), objs("trucks"), objs("orders")
+    if not cities:
+        raise FileNotFoundError(f"{scenario} has no data in {DB_PATH.name}; run database/run_all.sh")
     return {
-        "cities": {c["id"]: c for c in read_json(folder / "cities.json")},
-        "trucks": {t["id"]: t for t in read_json(folder / "trucks.json")},
-        "orders": {o["id"]: o for o in read_json(folder / "orders.json")},
-        "distances": read_json(folder / "distance_matrix.json"),
+        "cities": {c["id"]: c for c in cities},
+        "trucks": {t["id"]: t for t in trucks},
+        "orders": {o["id"]: o for o in orders},
+        "distances": dist,
     }
 
 
+@st.cache_data(ttl=300)
 def load_plan(scenario, plan_file):
-    return read_json(DATA_DIR / scenario / plan_file)
+    with _db() as con:
+        return json.loads(con.execute("SELECT plan_json FROM results.runs WHERE run_id = ?",
+                                      [_run_id(plan_file)]).fetchone()[0])
+
+
+def load_official(scenario, plan_file):
+    """The exact score of a plan (verified simulator, or the API for source=score)."""
+    with _db() as con:
+        r = con.execute("""SELECT score, source, orders_fulfilled, orders_total, orders_late, n_violations,
+                                  fulfillment, cost_efficiency, loaded_ratio, co2_efficiency
+                           FROM results.runs WHERE run_id = ?""", [_run_id(plan_file)]).fetchone()
+    keys = ("score", "source", "fulfilled", "total", "late", "violations", "F", "C", "L", "E")
+    return dict(zip(keys, r))
 
 
 # =============================================================================
@@ -598,11 +640,8 @@ def brand_html():
 
 
 def chips_html(scenario, plan_file, problems, show_checks):
-    is_demo = scenario.startswith("demo")
-    data_chip = (f'<span class="chip lg" title="data/{escape(scenario)}/{escape(plan_file)}'
-                 f'{" (invented trucks and orders)" if is_demo else ""}. Change it in the sidebar.">'
-                 f'<span class="dot" style="background:{MAUVE if is_demo else ACCENT}"></span>'
-                 f'{"Demo data" if is_demo else escape(scenario)}</span>')
+    data_chip = (f'<span class="chip lg" title="DuckDB results.runs, {escape(plan_file)}. Change it in the sidebar.">'
+                 f'<span class="dot" style="background:{ACCENT}"></span>{escape(scenario)}</span>')
     check = ""
     if show_checks:
         if problems:
@@ -616,7 +655,7 @@ def chips_html(scenario, plan_file, problems, show_checks):
     html(f'<div class="chips">{data_chip}{check}</div>')
 
 
-def ribbon_html(data, analysis, not_in_plan):
+def ribbon_html(data, analysis, not_in_plan, official=None):
     total_km = sum(t["km"] for t in analysis.values())
     loaded_km = sum(t["loaded_km"] for t in analysis.values())
     used = sum(1 for t in analysis.values() if t["km"] > 0 or t["orders"] > 0)
@@ -626,11 +665,20 @@ def ribbon_html(data, analysis, not_in_plan):
     loaded = f'{100 * loaded_km / total_km:.0f}<span class="unit">%</span>' if total_km else "—"
     cell = lambda label, value, caption, tip: (f'<div class="cell" title="{escape(tip)}"><div class="ov">{label}</div>'
                                                f'<div class="vl">{value}</div><div class="cap">{caption}</div></div>')
-    html('<div class="ribbon lg">'
-         '<div class="cell" title="The official score comes from the simulator or the organizers\' API">'
-         '<div class="ov">Official score</div><div class="score">—</div><div class="cap">awaiting simulator</div></div>'
-         + cell("Orders planned", f'{done}<span class="unit">/ {len(data["orders"])}</span>', "not yet official",
-                "Orders this plan picks up and delivers. Official fulfillment comes from the simulator.")
+    if official:
+        by = "organizers' API" if official["source"] in ("score", "simulate") else "verified simulator"
+        score_cell = (f'<div class="cell" title="F {official["F"]:.1f} · C {official["C"]:.1f} · '
+                      f'L {official["L"]:.1f} · E {official["E"]:.1f} · {official["violations"]} violations">'
+                      f'<div class="ov">Official score</div><div class="score">{official["score"]:.2f}</div>'
+                      f'<div class="cap">{by}</div></div>')
+        orders_cell = cell("Orders fulfilled", f'{official["fulfilled"]}<span class="unit">/ {official["total"]}</span>',
+                           f'{official["late"]} late', "On time or up to 60 min late, from the simulator")
+    else:
+        score_cell = ('<div class="cell" title="The official score comes from the simulator or the organizers\' API">'
+                      '<div class="ov">Official score</div><div class="score">—</div><div class="cap">awaiting simulator</div></div>')
+        orders_cell = cell("Orders planned", f'{done}<span class="unit">/ {len(data["orders"])}</span>', "not yet official",
+                           "Orders this plan picks up and delivers. Official fulfillment comes from the simulator.")
+    html('<div class="ribbon lg">' + score_cell + orders_cell
          + cell("Distance", f'{total_km:,}<span class="unit">km</span>', f"{used} of {len(data['trucks'])} trucks",
                 "Total km driven by all trucks, from the distance matrix")
          + cell("Driven loaded", loaded, "official formula", "Share of km driven with at least one order on board")
@@ -922,8 +970,8 @@ st.set_page_config(page_title="Fleet Control Tower · Prism", page_icon="💠", 
                    initial_sidebar_state="collapsed")
 
 if st.get_option("theme.base") != "light":
-    st.warning("This version has its own light theme. Start it from inside the prism folder: "
-               "`cd prism`, then `py -m streamlit run app_prism.py --server.port 8503`")
+    st.warning("The light theme wasn't loaded. Start the app from the repo root: "
+               "`python -m streamlit run dashboard/app.py`")
 
 # Theme: Light Prism by default. Remembered in the session (survives role and truck changes)
 # and in the page address (?theme=dark), so it also survives a page refresh.
@@ -978,7 +1026,7 @@ with st.sidebar:
 
 scenarios = list_scenarios()
 if not scenarios:
-    st.error("No data found. The app looks for the data folder next to it or one level up.")
+    st.error(f"No scored plans in {DB_PATH}. Run ./run_all.sh from the repo root first.")
     st.stop()
 
 # Drivers don't choose company data, so for them it is tucked away (but still there).
@@ -989,7 +1037,7 @@ with data_box:
     scenario = st.selectbox("Scenario", scenarios, key="scenario")
     plans = list_plans(scenario)
     if not plans:
-        st.warning(f"data/{scenario} has no plan file yet (name it plan_something.json).")
+        st.warning(f"{scenario} has no plan yet: run `cd solver && python run.py {scenario}`.")
         st.stop()
     plan_file = st.selectbox("Plan", plans, key="plan_file")
     st.caption("Lines are schematic connections between cities, not road shapes; "
@@ -998,6 +1046,7 @@ with data_box:
 try:
     data = load_scenario(scenario)
     plan = load_plan(scenario, plan_file)
+    official = load_official(scenario, plan_file)
 except Exception as error:                     # show a readable message instead of crashing
     st.error(f"Couldn't read the data files: {error}")
     st.stop()
@@ -1038,13 +1087,13 @@ if show_map:
         map_holder = st.container()                  # filled last, once the truck choice is known
         if show_numbers:
             with st.container(key="ribbon_slot"):
-                ribbon_html(data, analysis, not_in_plan)
+                ribbon_html(data, analysis, not_in_plan, official)
         dock = st.container(key="dock") if show_dock else st.container(key="picker")
         legend_slot = st.container(key="legend_slot")
 else:
     if show_numbers:
         with st.container(key="ribbon_static"):
-            ribbon_html(data, analysis, not_in_plan)
+            ribbon_html(data, analysis, not_in_plan, official)
     dock = st.container(key="dock_static") if show_dock else None
 
 labels = {tid: f"{tid}  ·  {data['trucks'][tid]['type']}, {data['trucks'][tid]['capacity_kg']:,} kg"

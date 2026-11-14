@@ -1,6 +1,5 @@
 """Command line entry point.
 
-  python -m gruber.cli fetch [scenario ...]     # snapshot scenario data (free GETs)
   python -m gruber.cli validate <scenario> <plan.json>   # free API Validate + local check
   python -m gruber.cli local <scenario> <plan.json>      # local simulate + score only
 """
@@ -9,15 +8,8 @@ from __future__ import annotations
 import argparse
 import json
 
-from . import loader, simulator, snapshot
+from . import loader, simulator
 from .api import Client
-
-
-def cmd_fetch(a):
-    c = Client()
-    ids = a.scenarios or [s["id"] for s in c.scenarios()]
-    for sid in ids:
-        print(snapshot.download(sid, c))
 
 
 def _load_plan(path):
@@ -47,12 +39,11 @@ def cmd_validate(a):
 def main():
     ap = argparse.ArgumentParser(prog="gruber")
     sp = ap.add_subparsers(dest="cmd", required=True)
-    f = sp.add_parser("fetch"); f.add_argument("scenarios", nargs="*")
     for name in ("local", "validate"):
         p = sp.add_parser(name); p.add_argument("scenario"); p.add_argument("plan")
         p.add_argument("--snapshot")
     a = ap.parse_args()
-    {"fetch": cmd_fetch, "local": cmd_local, "validate": cmd_validate}[a.cmd](a)
+    {"local": cmd_local, "validate": cmd_validate}[a.cmd](a)
 
 
 if __name__ == "__main__":

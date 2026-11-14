@@ -11,7 +11,7 @@ import duckdb
 
 try:
     from . import config as C
-except ImportError:  # run as a script from data_layer/ (python fetch.py)
+except ImportError:  # run as a script from database/ (python fetch.py)
     import config as C
 
 

@@ -85,7 +85,9 @@ def list_snapshots(sid: str) -> list[Path]:
     d = config.DATA_DIR / sid
     if not d.exists():
         return []
-    return sorted(p for p in d.iterdir() if p.is_dir() and (p / "orders.json").exists())
+    # names: 20261113_192945 (old) or 20261113T203436220952Z (database); sort by the digits
+    key = lambda p: "".join(ch for ch in p.name if ch.isdigit()).ljust(20, "0")
+    return sorted((p for p in d.iterdir() if p.is_dir() and (p / "orders.json").exists()), key=key)
 
 
 def load(sid: str, snapshot: str | None = None) -> Scenario:
@@ -97,7 +99,7 @@ def load(sid: str, snapshot: str | None = None) -> Scenario:
     else:
         snaps = list_snapshots(sid)
         if not snaps:
-            raise FileNotFoundError(f"no snapshot for {sid}; run `python -m gruber.cli fetch`")
+            raise FileNotFoundError(f"no snapshot for {sid}; run `cd database && ./run_all.sh`")
         p = snaps[-1]
     rd = lambda n: json.loads((p / f"{n}.json").read_text())
     sp = rd("sample_plan") if (p / "sample_plan.json").exists() else None

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The whole pipeline, one command:
-#   1. data layer: fetch API -> raw.* -> prep.* -> checks   (data_layer/run_all.sh)
+#   1. data layer: fetch API -> raw.* -> prep.* -> checks   (database/run_all.sh)
 #   2. tests: solver loader + evaluator still match           (pytest)
 #   3. solver: every scenario in solver/settings.py -> solver/out/<scenario>/ + results.*
 #
@@ -16,7 +16,7 @@ PY="${PYTHON:-python3}"
 
 if [ -z "${SKIP_FETCH:-}" ]; then
   echo "== 1/3 data layer"
-  PYTHON="$PY" ./data_layer/run_all.sh
+  PYTHON="$PY" ./database/run_all.sh
 else
   echo "== 1/3 data layer: skipped (SKIP_FETCH)"
 fi

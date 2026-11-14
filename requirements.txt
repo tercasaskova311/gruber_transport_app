@@ -1,3 +1,10 @@
 requests
 numpy
 pytest
+duckdb>=1.1
+
+# dashboard/ (Streamlit UI)
+streamlit>=1.67      # segmented_control(required=...) is missing in 1.52
+folium
+streamlit-folium
+pandas

@@ -12,7 +12,7 @@ Use the local simulator for all development. Only the final plan needs to go to 
 ## Setup
 
 ```powershell
-pip install -r requirements.txt        # requests, numpy, pytest
+pip install -r requirements.txt        # requests, numpy, pytest, duckdb
 ```
 
 Create a `.env` file in the project root (it is git-ignored, never commit it):
@@ -30,10 +30,9 @@ The scenario endpoints are public; the key is only needed for Validate / Simulat
 |---|---|
 | `config.py` | Reads the base URL and API key from env vars or `.env`. Never prints the key. |
 | `api.py` | HTTP client for all endpoints. Simulate / Score are guarded (see below). |
-| `snapshot.py` | Downloads a scenario into `data/<scenario>/<timestamp>/`. |
 | `loader.py` | **The only way solvers get data.** Returns a `Scenario` object. |
 | `simulator.py` | Exact copy of the API's Validate, Simulate and Score. |
-| `cli.py` | Command line: `fetch`, `local`, `validate`. |
+| `cli.py` | Command line: `local`, `validate`. |
 
 ## Using it from code
 
@@ -71,7 +70,6 @@ regenerates all scenarios on restart).
 ## Command line
 
 ```powershell
-python -m gruber.cli fetch                       # snapshot all scenarios (free)
 python -m gruber.cli local scenario_small plan.json     # local score, no API call
 python -m gruber.cli validate scenario_small plan.json  # API Validate (free) vs local check
 ```
@@ -111,6 +109,6 @@ python -m tools.parity compare            # saved API responses vs local simulat
 python -m tools.validate_fuzz 20          # random plans vs API Validate (free)
 ```
 
-After a server restart (new data): `fetch`, then `python -m tools.parity build`, and
+After a server restart (new data): `cd database && ./run_all.sh`, then `python -m tools.parity build`, and
 re-run parity with `python -m tools.parity send <scenario>` (asks y/n, uses Simulate/Score
 calls; never on competitive).

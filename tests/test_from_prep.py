@@ -1,8 +1,8 @@
-"""The DB loader (instance.load_from_db, reads data_layer's prep.*) must build the same
+"""The DB loader (instance.load_from_db, reads database's prep.*) must build the same
 problem as the JSON loader (instance.load_instance). Compared by id, because positions may
 differ. Then the solver must reach the same score on both.
 
-Skipped when the DuckDB file is missing (run data_layer/run_all.sh). Fails if the DB and the
+Skipped when the DuckDB file is missing (run database/run_all.sh). Fails if the DB and the
 newest JSON snapshot hold different data, e.g. after a server restart: re-fetch both.
 """
 import sys
@@ -25,7 +25,8 @@ pytest.importorskip("duckdb")
 
 
 def _pair(sid):
-    snaps = sorted(p for p in (ROOT / "data" / sid).glob("*") if (p / "orders.json").exists())
+    from gruber.loader import list_snapshots  # newest first by timestamp, any naming style
+    snaps = list_snapshots(sid)
     if not snaps:
         pytest.skip(f"no JSON snapshot for {sid}")
     return load_instance(snaps[-1]), load_from_db(sid)

@@ -153,9 +153,9 @@ def load_instance(folder: str | Path) -> Instance:
 
 
 def list_db_scenarios() -> list[str]:
-    """Every scenario in the DB's prep schema (data_layer.load.list_scenarios)."""
+    """Every scenario in the DB's prep schema (database.load.list_scenarios)."""
     import settings  # noqa: F401,PLC0415  (puts the repo root on sys.path)
-    from data_layer import load as dl  # noqa: PLC0415
+    from ingestion import load as dl  # noqa: PLC0415
 
     con = dl.connect()
     try:
@@ -165,15 +165,15 @@ def list_db_scenarios() -> list[str]:
 
 
 def load_from_db(scenario_id: str) -> Instance:
-    """Build the same Instance as load_instance(), from data_layer's prep.* tables.
+    """Build the same Instance as load_instance(), from database's prep.* tables.
 
     Positions (city_pos, truck_pos, order_pos) become the solver's indices. Plans are written
     with ids, so the different order vs. the JSON files does not matter.
-    The connection comes from data_layer.load.connect() (same DB file, read-only, waits if
+    The connection comes from database.load.connect() (same DB file, read-only, waits if
     fetch.py is writing). Imported here so the JSON route keeps working without duckdb.
     """
     import settings  # noqa: F401,PLC0415  (puts the repo root on sys.path)
-    from data_layer import load as dl  # noqa: PLC0415
+    from ingestion import load as dl  # noqa: PLC0415
 
     sid = str(scenario_id)
     con = dl.connect()
@@ -183,7 +183,7 @@ def load_from_db(scenario_id: str) -> Instance:
 
         snap = rows("SELECT snapshot_id FROM raw.cur_snapshots WHERE scenario_id = ?")
         if not snap:
-            raise KeyError(f"{sid} is not in {settings.DB_PATH}; run data_layer/run_all.sh")
+            raise KeyError(f"{sid} is not in {settings.DB_PATH}; run database/run_all.sh")
 
         cities = rows("""SELECT city_pos, city_id, name, latitude, longitude
                          FROM prep.city_index WHERE scenario_id = ? ORDER BY city_pos""")

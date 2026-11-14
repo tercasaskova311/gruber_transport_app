@@ -1,0 +1,7 @@
+{
+ "id": "scenario_competitive",
+ "name": "Competitive",
+ "cities_count": 45,
+ "trucks_count": 25,
+ "orders_count": 200
+}

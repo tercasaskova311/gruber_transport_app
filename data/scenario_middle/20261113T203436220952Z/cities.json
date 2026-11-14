@@ -1,0 +1,142 @@
+[
+ {
+  "id": "C008",
+  "name": "Cacak",
+  "country": "RS",
+  "latitude": 43.89,
+  "longitude": 20.35
+ },
+ {
+  "id": "C010",
+  "name": "Kraljevo",
+  "country": "RS",
+  "latitude": 43.72,
+  "longitude": 20.69
+ },
+ {
+  "id": "C011",
+  "name": "Smederevo",
+  "country": "RS",
+  "latitude": 44.66,
+  "longitude": 20.93
+ },
+ {
+  "id": "C014",
+  "name": "Krusevac",
+  "country": "RS",
+  "latitude": 43.58,
+  "longitude": 21.33
+ },
+ {
+  "id": "C018",
+  "name": "Sombor",
+  "country": "RS",
+  "latitude": 45.77,
+  "longitude": 19.11
+ },
+ {
+  "id": "C022",
+  "name": "Kikinda",
+  "country": "RS",
+  "latitude": 45.83,
+  "longitude": 20.47
+ },
+ {
+  "id": "C024",
+  "name": "Jagodina",
+  "country": "RS",
+  "latitude": 43.98,
+  "longitude": 21.26
+ },
+ {
+  "id": "C045",
+  "name": "Mostar",
+  "country": "BA",
+  "latitude": 43.34,
+  "longitude": 17.81
+ },
+ {
+  "id": "C048",
+  "name": "Brcko",
+  "country": "BA",
+  "latitude": 44.87,
+  "longitude": 18.81
+ },
+ {
+  "id": "C049",
+  "name": "Doboj",
+  "country": "BA",
+  "latitude": 44.73,
+  "longitude": 18.09
+ },
+ {
+  "id": "C053",
+  "name": "Bar",
+  "country": "ME",
+  "latitude": 42.09,
+  "longitude": 19.1
+ },
+ {
+  "id": "C060",
+  "name": "Tetovo",
+  "country": "MK",
+  "latitude": 42.01,
+  "longitude": 20.97
+ },
+ {
+  "id": "C062",
+  "name": "Stip",
+  "country": "MK",
+  "latitude": 41.74,
+  "longitude": 22.2
+ },
+ {
+  "id": "C066",
+  "name": "Shkoder",
+  "country": "AL",
+  "latitude": 42.07,
+  "longitude": 19.51
+ },
+ {
+  "id": "C080",
+  "name": "Szeged",
+  "country": "HU",
+  "latitude": 46.25,
+  "longitude": 20.15
+ },
+ {
+  "id": "C107",
+  "name": "Arad",
+  "country": "RO",
+  "latitude": 46.18,
+  "longitude": 21.31
+ },
+ {
+  "id": "C118",
+  "name": "Ramnicu Valcea",
+  "country": "RO",
+  "latitude": 45.1,
+  "longitude": 24.37
+ },
+ {
+  "id": "C120",
+  "name": "Sofia",
+  "country": "BG",
+  "latitude": 42.7,
+  "longitude": 23.32
+ },
+ {
+  "id": "C126",
+  "name": "Pleven",
+  "country": "BG",
+  "latitude": 43.42,
+  "longitude": 24.61
+ },
+ {
+  "id": "C130",
+  "name": "Pernik",
+  "country": "BG",
+  "latitude": 42.6,
+  "longitude": 23.03
+ }
+]
