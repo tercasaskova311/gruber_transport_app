@@ -83,3 +83,32 @@ def test_resume_from_saved_state_is_exact(sid):
         assert resumed.states == fresh.states
         n += 1
     assert n > 10
+
+
+@pytest.mark.parametrize("sid", SCENARIOS)
+def test_tail_skip_is_exact_for_the_score(sid):
+    """simulate_truck(stop=...) skips the clock after the last time-window stop. Everything the
+    score uses must equal a full simulation of the same route."""
+    rng = random.Random(11)
+    n = 0
+    for sc, inst, k, tid, stops, route in _routes(sid, 30, seed=3):
+        base = ev.simulate_truck(inst, k, route, early_exit=False, record=True)
+        O = inst.orders
+        lt = len(route) - 1
+        while lt >= 0 and (O[route[lt][1]].ptw if route[lt][0] else O[route[lt][1]].dtw) is None:
+            lt -= 1
+        used = {oi for _, oi in route}
+        free = [o.idx for o in O if o.idx not in used and k in inst.compatible[o.idx]]
+        for oi in rng.sample(free, min(4, len(free))):
+            a = rng.randrange(len(route) + 1)
+            b = rng.randrange(a, len(route) + 1)
+            new = route[:a] + [(True, oi)] + route[a:b] + [(False, oi)] + route[b:]
+            fast = ev.simulate_truck(inst, k, new, early_exit=False, base=base, start=a, stop=max(b, lt) + 3)
+            full = ev.simulate_truck(inst, k, new, early_exit=False)
+            for f in ("km", "loaded_km", "cost", "co2", "n_fulfilled", "load_km"):
+                assert getattr(fast, f) == getattr(full, f), (sid, f, a, b)
+            assert fast.value == pytest.approx(full.value, abs=1e-9)
+            # capacity is the caller's job when resuming; lateness must agree
+            assert {o: l for o, l in fast.late.items()} == {o: l for o, l in full.late.items()}
+            n += 1
+    assert n > 50
