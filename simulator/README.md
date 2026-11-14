@@ -32,7 +32,8 @@ The scenario endpoints are public; the key is only needed for Validate / Simulat
 | `api.py` | HTTP client for all endpoints. Simulate / Score are guarded (see below). |
 | `loader.py` | **The only way solvers get data.** Returns a `Scenario` object. |
 | `simulator.py` | Exact copy of the API's Validate, Simulate and Score. |
-| `cli.py` | Command line: `local`, `validate`. |
+| `submit.py` | Checked submission: all free checks, then one confirmed Score call. |
+| `cli.py` | Command line: `local`, `validate`, `submit`. |
 
 ## Using it from code
 
@@ -73,6 +74,16 @@ regenerates all scenarios on restart).
 python -m gruber.cli local scenario_small plan.json     # local score, no API call
 python -m gruber.cli validate scenario_small plan.json  # API Validate (free) vs local check
 ```
+
+## Submitting a plan
+
+`python -m gruber.cli submit <scenario> <plan.json> [--snapshot <dir>] [--dry-run] [--i-am-sure]`
+runs, in order: (1) re-download the scenario and compare it with the snapshot the plan was built on
+(if it differs, the fresh data is saved as a new snapshot and the command stops), (2) exact local score,
+zero violations required, (3) free API Validate, (4) Score calls recorded in `out/submissions/log.csv`,
+(5) "Send to Score? [y/N]" (`scenario_competitive` also needs `--i-am-sure` and the typed scenario name),
+(6) one Score call, saved to `out/submissions/<scenario>/` and compared with the local score.
+Always run it with `--dry-run` first: that does steps 1-4 and sends nothing to Score.
 
 ## API safety rules
 
