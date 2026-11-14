@@ -5,3 +5,5 @@ out/
 .pytest_cache/
 data/api_responses/
 .DS_Store
+data/scenarios_*.json
+.vscode/
