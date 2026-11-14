@@ -282,12 +282,16 @@ def score(inst: Instance, tot: Totals) -> tuple[float, dict]:
 
 
 def score_value(inst: Instance, tot: Totals) -> float:
+    if inst.value_only:
+        return 1000.0 * tot.value / inst.value_total - inst.km_weight * tot.km
     return score(inst, tot)[0]
 
 
 def score_swapped(inst: Instance, tot: Totals, old: TruckResult, new: TruckResult) -> float:
     """score_value(inst, tot.swapped(old, new)) without building objects (same arithmetic)."""
     km = tot.km - old.km + new.km
+    if inst.value_only:
+        return 1000.0 * (tot.value - old.value + new.value) / inst.value_total - inst.km_weight * km
     cost = tot.cost - old.cost + new.cost
     co2 = tot.co2 - old.co2 + new.co2
     n = inst.n_orders

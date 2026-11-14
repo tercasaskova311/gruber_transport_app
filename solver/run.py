@@ -42,6 +42,10 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     print(f"Loaded {len(inst.trucks)} trucks, {inst.n_orders} orders, {len(inst.city_ids)} cities")
 
+    cfg = dict(CONFIGS[args.config])
+    tw_share = cfg.pop("tw_first", 0.0)
+    protect_release = cfg.pop("protect_release", 0.0)
+    alns_time = args.time * (1.0 - tw_share)
     t0 = time.time()
     # greedy (regret=1) and regret-2/3 variants are cheap: build all, keep the best as the start
     variants = {rg: construct(inst, seed=args.seed, regret=rg) for rg in (1, 2, 3)}
@@ -50,12 +54,18 @@ def main():
     initial = max(variants.values(), key=lambda v: v.S)
     print(f"[3+4] Initial plan (best ΔS insertion): score {initial.S:.2f}, "
           f"{inst.n_orders - len(initial.unassigned)}/{inst.n_orders} orders, {time.time() - t0:.1f}s")
+    if tw_share:
+        import twfirst
+        initial, protect = twfirst.build(inst, time_limit=args.time * tw_share, seed=args.seed)
+        cfg.update(protect=protect, protect_release=protect_release)
+        print(f"      tw-first: skeleton serves {len(protect)} time-window orders; "
+              f"after fill-in score {initial.S:.2f}, {inst.n_orders - len(initial.unassigned)}/{inst.n_orders} orders")
     assert not check_plan(inst, initial), check_plan(inst, initial)
 
-    print(f"[5] ALNS for {args.time:.0f}s …")
+    print(f"[5] ALNS for {alns_time:.0f}s …")
     t_construct = time.time() - t0
-    best, log = alns(inst, initial, time_limit=args.time, seed=args.seed, verbose=not args.quiet,
-                     **CONFIGS[args.config])
+    best, log = alns(inst, initial, time_limit=alns_time, seed=args.seed, verbose=not args.quiet,
+                     **cfg)
     issues = check_plan(inst, best)
     assert not issues, issues
     print(f"    {log.iterations} iterations, best score {best.S:.2f}")
