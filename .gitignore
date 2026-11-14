@@ -4,5 +4,4 @@ __pycache__/
 out/
 .pytest_cache/
 data/api_responses/
-data/hackathon.duckdb*
 .DS_Store
