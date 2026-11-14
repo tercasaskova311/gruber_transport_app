@@ -31,7 +31,7 @@ scenarios the largest observed std, 3.1, is used for all three.)
 | ejection sweep (config `eject`) | algo/ejection @ 9d2db83 | 1000.00 (0) | 997.11 (-0.03, noise) | 970.51 (**-1.15**, worse) | 924.88 (**+4.97**, at the threshold, all 3 seeds above best's max) | 926.91 (+1.14, noise) | 898.07 (+1.73, noise) | 903.90 (-0.25, noise) | accept: competitive better; the big drop was seed luck (8-seed check below) | **accepted**, merged into best, on by default |
 | ejection + blocking destroy (config `eject+block`, 3 scenarios only) | algo/ejection @ 9d2db83 | - | - | 971.05 (-0.61, worse) | 924.18 (+4.27, noise) | - | 897.66 (+1.32, noise) | - | no gain over `eject` alone | kept in code, off |
 | **best** after merging ejection (current reference; big = 8 seeds) | best @ cb9aeb5 | 1000.00 | 997.15 | 971.19 (8 seeds: 2 low, 6 high) | 924.50 | 926.85 | 898.02 | 902.30 | reference for the next experiments | - |
-| first-leg moves (config `loaded`; reduced benchmark) | algo/loaded @ 7ee2d47 | - | 997.13 (-0.02, noise) | 971.03 (8 seeds: 3 low, 5 high; -0.16, noise) | 923.91 (-0.59, noise) | - | - | 903.71 (+1.41, noise) | reject: no effect | pending |
+| first-leg moves (config `loaded`; reduced benchmark) | algo/loaded @ 7ee2d47 | - | 997.13 (-0.02, noise) | 971.03 (8 seeds: 3 low, 5 high; -0.16, noise) | 923.91 (-0.59, noise) | - | - | 903.71 (+1.41, noise) | reject: no effect | **rejected** (branch kept) |
 
 Note: runs are time-limited, so the same code and seeds do not repeat exactly (compare the two
 rows above: same code, competitive 919.16 vs 919.91, fake_big_a 926.87 vs 925.77 with one seed
