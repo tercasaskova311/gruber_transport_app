@@ -43,7 +43,7 @@ THEMES = {
     "light": dict(
         TEXT="#272B33", MUTED="#5E6575", FAINT="#8C92A1",
         ACCENT="#22A08C", AQUA="#8FE3C8", MAUVE="#D3AFC6", RED="#E1203B",
-        ROUTE="#EA580C", ROUTE_COLD="#0891B2",          # standard = orange, refrigerated = cold cyan
+        ROUTE="#F5B700", ROUTE_COLD="#1F3FA8",          # Trailforks-style bold pair: standard = yellow, refrigerated = dark blue
         TRUCK_BG="#1D4ED8", GREEN="#16A34A", STOP_HOLLOW="#FFFFFF",
         PRISM="conic-gradient(from 200deg, #8FE3C8, #B9DCF4, #CBB9F2, #EDC3DC, #F7E7CB, #8FE3C8)",
         SPECTRAL="linear-gradient(100deg, #1F9E8A 0%, #4F8FDF 48%, #A56BC8 100%)",
@@ -80,10 +80,10 @@ THEMES = {
         # map
         FLOAT_BG="rgba(248,250,252,0.93)",
         MAP_TILES=_OSM_TILES, MAP_BG="#EEF1F2",
-        MAP_TINT="saturate(0.4) brightness(1.03)",      # OSM, colours toned down
+        MAP_TINT="none",                                # OSM in its full colours
         ROUTE_INK="#F2620F", ROUTE_BLEND="normal", ROUTE_GLOW=False,     # white edge keeps crossings clean
-        # load on board 0-20 %, ..., 80-100 %: pale peach -> Strava orange (fuller = hotter, not darker)
-        LOAD_RAMP=["#F8C9A4", "#F7A56E", "#F6853F", "#F46A1C", "#E9520A"],
+        # load on board 0-20 %, ..., 80-100 %: yellow -> deep orange (no red: red = unserved orders)
+        LOAD_RAMP=["#F5C400", "#F7AE0A", "#F59610", "#F27C14", "#E8620E"],
         TRUCK_ICON="#232733", TRUCK_ICON_EDGE="#FFFFFF",
         MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(255,255,255,0.82)", MAP_CONTROL_LINE="rgba(39,43,51,0.08)",
@@ -96,7 +96,7 @@ THEMES = {
     "dark": dict(
         TEXT="#F2EEF8", MUTED="#B9B0D0", FAINT="#8E85A8",
         ACCENT="#5FD6BE", AQUA="#8FE3C8", MAUVE="#C99BC0", RED="#FF4D6A",
-        ROUTE="#FF8A3D", ROUTE_COLD="#22D3EE",          # standard = orange, refrigerated = cold cyan
+        ROUTE="#FFD23F", ROUTE_COLD="#5B8CFF",          # Trailforks-style bold pair: standard = yellow, refrigerated = blue
         TRUCK_BG="#3B82F6", GREEN="#4ADE80", STOP_HOLLOW="#1B1530",
         PRISM="conic-gradient(from 200deg, #7FD9C0, #8FB8F0, #B49BF0, #E0A8CF, #E9D2B8, #7FD9C0)",
         SPECTRAL="linear-gradient(100deg, #6FE3C9 0%, #9DB8FF 50%, #D6A3E8 100%)",
@@ -134,10 +134,10 @@ THEMES = {
         # map
         FLOAT_BG="rgba(38,31,60,0.94)",
         MAP_TILES=_OSM_TILES, MAP_BG="#1E1830",
-        MAP_TINT="brightness(0.6) contrast(1.08) saturate(0.4)",   # OSM, dimmed for dark mode
+        MAP_TINT="brightness(0.7) contrast(1.05)",      # OSM in full colour, dimmed for dark mode
         ROUTE_INK="#FF8A3D", ROUTE_BLEND="screen", ROUTE_GLOW=True,      # overlaps glow brighter, like Strava
-        # load on board 0-20 %, ..., 80-100 %: Strava heatmap, dark ember -> hot yellow-white
-        LOAD_RAMP=["#7A2A12", "#B8441A", "#F06A1E", "#FF9A3C", "#FFD27A"],
+        # load on board 0-20 %, ..., 80-100 %: yellow -> orange (no red: red = unserved orders)
+        LOAD_RAMP=["#FDE047", "#FCCB3A", "#FBB12E", "#FB9524", "#F97A1A"],
         TRUCK_ICON="#F4F1FA", TRUCK_ICON_EDGE="#14111F",
         MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(52,43,74,0.88)", MAP_CONTROL_LINE="rgba(255,255,255,0.10)",
@@ -987,8 +987,7 @@ def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
     # Scale bar (distances matter here); zoom and panning kept to the scenario's part of the world
     m = folium.Map(location=[sum(lats) / len(lats), sum(lons) / len(lons)], zoom_start=5,
                    tiles=MAP_TILES, attr=MAP_CREDIT, zoom_snap=0.25, control_scale=True,
-                   min_zoom=4, max_zoom=13, max_bounds=True,
-                   min_lat=min(lats) - 8, max_lat=max(lats) + 8, min_lon=min(lons) - 15, max_lon=max(lons) + 15)
+                   min_zoom=3, max_zoom=13)   # no max_bounds: at fleet zoom the box filled the screen, so the map could not be dragged
     m.get_root().header.add_child(folium.Element(map_css()))
     # City names only along the selected truck's route; with all trucks shown they would pile up
     # (hover any city for its name).
@@ -1133,13 +1132,11 @@ def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
                  f'color:{TRUCK_ICON};white-space:nowrap;text-shadow:0 0 3px {LABEL_HALO},0 0 3px {LABEL_HALO},0 0 5px {LABEL_HALO}">{text}</span>'
                  if text else "")
         state = "now here" if where == here_city else "start here"
-        types = {data["trucks"][t]["type"] for t in tids}   # "Truck type" view: icon takes the route colour
-        icon_fill = route_colour(data["trucks"][tids[0]]) if colour_by == "Truck type" and len(types) == 1 else None
         px = 28 if selected else 20                    # fleet view: small icons, the routes are the picture
         folium.Marker(point(where), icon=folium.DivIcon(
             icon_size=(px, px), icon_anchor=(px // 2, px + 2),  # bottom-centre of the icon just above the city dot
             html=f'<div style="position:relative;width:{px}px;height:{px}px;'
-                 f'filter:drop-shadow(0 2px 2px rgba(0,0,0,0.3))">{truck_svg(px, icon_fill)}{label}</div>',
+                 f'filter:drop-shadow(0 2px 2px rgba(0,0,0,0.3))">{truck_svg(px)}{label}</div>',
         ), tooltip=f"<b>{cities[where]['name']}</b> · {state}<br>"
                    + "<br>".join(f"{t} · {data['trucks'][t]['type']}" for t in tids),
             z_index_offset=1000,                        # always above city names and dots
@@ -1369,8 +1366,6 @@ if show_map:
         fleet_map = build_map(data, analysis, not_in_plan, selected,
                               show_unplanned="Orders not in plan" in show,
                               only_selected=is_driver, done_stops=done_stops, here_city=here,
-                              unserved_lines=(role == "Dispatcher" and selected is None
-                                              and str(st.session_state.get("dock_tab", "")).startswith("Unserved")),
                               colour_by=colour_by)
         st_folium(fleet_map, height=800, use_container_width=True, returned_objects=[], key="prism_map")
     with legend_slot:
