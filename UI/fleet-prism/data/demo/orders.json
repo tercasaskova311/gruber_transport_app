@@ -1,0 +1,142 @@
+[
+  {
+    "id": "O001",
+    "pickup_city": "D01",
+    "delivery_city": "D06",
+    "weight_kg": 4000,
+    "required_truck_type": null
+  },
+  {
+    "id": "O002",
+    "pickup_city": "D01",
+    "delivery_city": "D05",
+    "weight_kg": 2500,
+    "required_truck_type": null
+  },
+  {
+    "id": "O003",
+    "pickup_city": "D05",
+    "delivery_city": "D06",
+    "weight_kg": 3000,
+    "required_truck_type": null
+  },
+  {
+    "id": "O004",
+    "pickup_city": "D06",
+    "delivery_city": "D10",
+    "weight_kg": 5000,
+    "required_truck_type": null
+  },
+  {
+    "id": "O005",
+    "pickup_city": "D10",
+    "delivery_city": "D08",
+    "weight_kg": 3500,
+    "required_truck_type": null
+  },
+  {
+    "id": "O006",
+    "pickup_city": "D06",
+    "delivery_city": "D07",
+    "weight_kg": 2000,
+    "required_truck_type": "refrigerated"
+  },
+  {
+    "id": "O007",
+    "pickup_city": "D06",
+    "delivery_city": "D04",
+    "weight_kg": 3000,
+    "required_truck_type": "refrigerated"
+  },
+  {
+    "id": "O008",
+    "pickup_city": "D07",
+    "delivery_city": "D04",
+    "weight_kg": 2500,
+    "required_truck_type": "refrigerated"
+  },
+  {
+    "id": "O009",
+    "pickup_city": "D04",
+    "delivery_city": "D09",
+    "weight_kg": 4000,
+    "required_truck_type": "refrigerated"
+  },
+  {
+    "id": "O010",
+    "pickup_city": "D04",
+    "delivery_city": "D02",
+    "weight_kg": 6000,
+    "required_truck_type": null
+  },
+  {
+    "id": "O011",
+    "pickup_city": "D04",
+    "delivery_city": "D03",
+    "weight_kg": 5000,
+    "required_truck_type": null
+  },
+  {
+    "id": "O012",
+    "pickup_city": "D03",
+    "delivery_city": "D08",
+    "weight_kg": 4000,
+    "required_truck_type": null
+  },
+  {
+    "id": "O013",
+    "pickup_city": "D08",
+    "delivery_city": "D09",
+    "weight_kg": 6000,
+    "required_truck_type": null
+  },
+  {
+    "id": "O014",
+    "pickup_city": "D09",
+    "delivery_city": "D07",
+    "weight_kg": 3000,
+    "required_truck_type": null
+  },
+  {
+    "id": "O015",
+    "pickup_city": "D03",
+    "delivery_city": "D04",
+    "weight_kg": 3000,
+    "required_truck_type": "hazmat"
+  },
+  {
+    "id": "O016",
+    "pickup_city": "D03",
+    "delivery_city": "D01",
+    "weight_kg": 2000,
+    "required_truck_type": "hazmat"
+  },
+  {
+    "id": "O017",
+    "pickup_city": "D02",
+    "delivery_city": "D06",
+    "weight_kg": 1500,
+    "required_truck_type": "hazmat"
+  },
+  {
+    "id": "O018",
+    "pickup_city": "D09",
+    "delivery_city": "D03",
+    "weight_kg": 2500,
+    "required_truck_type": "hazmat"
+  },
+  {
+    "id": "O019",
+    "pickup_city": "D07",
+    "delivery_city": "D10",
+    "weight_kg": 4500,
+    "required_truck_type": null
+  },
+  {
+    "id": "O020",
+    "pickup_city": "D08",
+    "delivery_city": "D01",
+    "weight_kg": 2000,
+    "required_truck_type": "refrigerated"
+  }
+]

@@ -1,0 +1,15 @@
+# PRISM prototype theme: light, pearlescent. Used only when Streamlit is started from this folder.
+[theme]
+base = "light"
+primaryColor = "#22A08C"
+backgroundColor = "#F2F4F7"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#272B33"
+# Manrope: clean, modern sans with good numerals. Needs internet; falls back to sans-serif.
+font = "Manrope:https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap, sans-serif"
+
+[server]
+runOnSave = true
+
+[client]
+toolbarMode = "viewer"

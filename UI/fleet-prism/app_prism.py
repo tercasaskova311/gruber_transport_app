@@ -1,0 +1,1152 @@
+"""
+Fleet Control Tower, PRISM edition (experimental design, iteration 3: Light + Midnight)
+GRUBER Logistics Grand Prix, NOI Hackathon 2026
+
+Light, pearlescent "liquid glass". The map is the stage; the information floats
+above it: a score ribbon, a fleet dock and a legend. All three roles from app.py
+(Dispatcher, Manager, Driver) work here with the same data, calculations and
+driver progress.
+
+How this file is organised:
+  1. Design tokens       colours, type scale, radii, sizes, role presets
+  2. Loading data        identical to app.py (plus: finds the shared data folder one level up)
+  3. Route calculations  identical to app.py
+  4. Glass components    header, ribbon, dock sections, stop timeline, legend
+  5. The map             pale pearlescent tiles, glowing routes
+  6. The page            role-based layout
+
+Run it from INSIDE the prism folder, so its light theme is used:
+    cd prism
+    py -m streamlit run app_prism.py --server.port 8503
+"""
+
+import json
+import math
+from html import escape
+from pathlib import Path
+
+import folium
+import pandas as pd
+import streamlit as st
+from folium.plugins import PolyLineTextPath
+from streamlit_folium import st_folium
+
+
+# =============================================================================
+# 1. DESIGN TOKENS
+#    Two atmospheres of one product. Every colour in the app comes from the active
+#    palette, so both themes share exactly the same layout, type and components.
+# =============================================================================
+BRAND_FONT = "'Instrument Serif', Georgia, serif"   # used for the brand title only
+MAP_CREDIT = "Esri, OpenStreetMap contributors"
+
+_LIGHT_TILES = ("https://services.arcgisonline.com/arcgis/rest/services/"
+                "Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}")
+_DARK_TILES = ("https://services.arcgisonline.com/arcgis/rest/services/"
+               "Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}")
+
+THEMES = {
+    # ---------------- Light Prism: mint · pearl · lavender ----------------
+    "light": dict(
+        TEXT="#272B33", MUTED="#5E6575", FAINT="#8C92A1",
+        ACCENT="#22A08C", AQUA="#8FE3C8", MAUVE="#D3AFC6", RED="#E1203B",
+        PRISM="conic-gradient(from 200deg, #8FE3C8, #B9DCF4, #CBB9F2, #EDC3DC, #F7E7CB, #8FE3C8)",
+        SPECTRAL="linear-gradient(100deg, #1F9E8A 0%, #4F8FDF 48%, #A56BC8 100%)",
+        TRUCK_COLOURS=["#2F8FDB", "#8A63E8", "#13A386", "#EE6A4C", "#C64FA8",
+                       "#2AAFC4", "#6B7BDB", "#5E9E3C", "#B7792A", "#4A5468"],
+        PAGE_BG=("radial-gradient(900px 620px at -5% -10%, rgba(143,227,200,0.60), transparent 62%),"
+                 "radial-gradient(820px 600px at 105% -8%, rgba(203,185,242,0.55), transparent 62%),"
+                 "radial-gradient(900px 700px at 102% 110%, rgba(237,195,220,0.50), transparent 62%),"
+                 "radial-gradient(820px 620px at -4% 108%, rgba(185,220,244,0.55), transparent 62%),"
+                 "linear-gradient(180deg, #F5F7F9 0%, #EDF0F4 100%)"),
+        GLASS=("linear-gradient(160deg, rgba(255,255,255,0.62) 0%, rgba(240,250,246,0.34) 42%, "
+               "rgba(243,240,252,0.36) 100%)"),
+        GLASS_BORDER="rgba(255,255,255,0.70)",
+        EDGE=("inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.30), "
+              "inset 1px 0 0 rgba(143,227,200,0.35), inset -1px 0 0 rgba(203,185,242,0.40)"),
+        LIFT="0 1px 2px rgba(39,43,51,0.05), 0 12px 30px rgba(60,66,96,0.12), 0 32px 70px rgba(96,86,140,0.12)",
+        SHEEN="rgba(255,255,255,0.85)", TRUCK_TINT="16%", RIM_OPACITY="0.8",
+        HAIR="rgba(39,43,51,0.08)", HAIR_SHADOW="rgba(255,255,255,0.7)",
+        TRACK="rgba(39,43,51,0.09)", HOVER="rgba(255,255,255,0.45)",
+        ACTIVE_BG="rgba(143,227,200,0.24)", ACTIVE_RING="rgba(143,227,200,0.65)",
+        NODE_RING="rgba(255,255,255,0.9)", NODE_HOLLOW="#FFFFFF", NODE_GLYPH="#FFFFFF",
+        INPUT_BG="rgba(255,255,255,0.55)", INPUT_BORDER="rgba(255,255,255,0.9)",
+        INPUT_SHADOW="inset 0 1px 0 #FFFFFF, 0 1px 6px rgba(60,66,96,0.08)",
+        MENU_BG="#FFFFFF", MENU_HOVER="rgba(143,227,200,0.22)",
+        SIDEBAR_BG="linear-gradient(180deg, rgba(255,255,255,0.80), rgba(255,255,255,0.55))",
+        SIDEBAR_BORDER="rgba(255,255,255,0.9)",
+        SEG_ON_BG="linear-gradient(180deg, #FFFFFF, rgba(255,255,255,0.7))",
+        SEG_ON_SHADOW=("inset 0 1px 0 #FFFFFF, 0 2px 8px rgba(60,66,96,0.14), 0 0 0 1px rgba(143,227,200,0.9), "
+                       "0 0 16px rgba(143,227,200,0.6)"),
+        STAGE_RING="rgba(255,255,255,0.75)",
+        STAGE_SHADOW="0 2px 4px rgba(60,66,96,0.06), 0 30px 70px rgba(90,84,140,0.20)",
+        BTN_PRIMARY="linear-gradient(180deg, #2FB7A0, #22A08C)", BTN_PRIMARY_TEXT="#FFFFFF",
+        BTN_SHADOW="0 6px 16px rgba(34,160,140,0.32)", BTN_SECONDARY_BG="rgba(255,255,255,0.55)",
+        ORB_RING="rgba(255,255,255,0.9)", LOGO_GLOW="rgba(120,110,190,0.30)",
+        # map
+        MAP_TILES=_LIGHT_TILES, MAP_BG="#EEF1F2",
+        MAP_TINT="saturate(0.6) sepia(0.12) hue-rotate(118deg) brightness(1.03) contrast(0.95)",
+        MAP_SHEEN=("radial-gradient(70% 60% at 12% 8%, rgba(143,227,200,0.22), transparent 70%),"
+                   "radial-gradient(60% 60% at 80% 92%, rgba(203,185,242,0.22), transparent 70%),"
+                   "radial-gradient(45% 45% at 62% 18%, rgba(237,195,220,0.16), transparent 70%)"),
+        MAP_CONTROL_BG="rgba(255,255,255,0.82)", MAP_CONTROL_LINE="rgba(39,43,51,0.08)",
+        TOOLTIP_BG="#FFFFFF",
+        CITY_FILL="#5E6680", CITY_RING="#FFFFFF", LABEL_TEXT="#2E333D", LABEL_HALO="#FFFFFF",
+        CASING="#FFFFFF", CASING_OPACITY=0.95, GLOW_SELECTED=0.24, GLOW=0.17, FADED=0.16,
+        PILL_TEXT="#FFFFFF", MARKER_RING="rgba(255,255,255,0.9)",
+    ),
+    # ---------------- Midnight Prism: deep plum · amethyst · aqua ----------------
+    "dark": dict(
+        TEXT="#F2EEF8", MUTED="#B9B0D0", FAINT="#8E85A8",
+        ACCENT="#5FD6BE", AQUA="#8FE3C8", MAUVE="#C99BC0", RED="#FF4D6A",
+        PRISM="conic-gradient(from 200deg, #7FD9C0, #8FB8F0, #B49BF0, #E0A8CF, #E9D2B8, #7FD9C0)",
+        SPECTRAL="linear-gradient(100deg, #6FE3C9 0%, #9DB8FF 50%, #D6A3E8 100%)",
+        TRUCK_COLOURS=["#5CB4F5", "#A98BFF", "#3FD3AE", "#FF8C6E", "#E77CCB",
+                       "#4FD3E3", "#909DFF", "#8FD16E", "#E6A957", "#B4BDD3"],
+        PAGE_BG=("radial-gradient(900px 620px at -5% -10%, rgba(95,214,190,0.18), transparent 62%),"
+                 "radial-gradient(820px 600px at 105% -8%, rgba(150,118,232,0.32), transparent 62%),"
+                 "radial-gradient(900px 700px at 102% 110%, rgba(201,120,176,0.24), transparent 62%),"
+                 "radial-gradient(820px 620px at -4% 108%, rgba(86,100,196,0.26), transparent 62%),"
+                 "linear-gradient(180deg, #241D3A 0%, #1B1630 100%)"),
+        GLASS=("linear-gradient(160deg, rgba(80,66,116,0.60) 0%, rgba(52,43,74,0.48) 45%, "
+               "rgba(64,51,94,0.54) 100%)"),
+        GLASS_BORDER="rgba(255,255,255,0.12)",
+        EDGE=("inset 0 1px 0 rgba(255,255,255,0.20), inset 0 -1px 0 rgba(255,255,255,0.04), "
+              "inset 1px 0 0 rgba(143,227,200,0.16), inset -1px 0 0 rgba(203,185,242,0.20)"),
+        LIFT="0 1px 2px rgba(0,0,0,0.30), 0 14px 34px rgba(10,5,25,0.45), 0 32px 70px rgba(30,12,60,0.40)",
+        SHEEN="rgba(255,255,255,0.13)", TRUCK_TINT="24%", RIM_OPACITY="0.55",
+        HAIR="rgba(255,255,255,0.09)", HAIR_SHADOW="rgba(0,0,0,0.25)",
+        TRACK="rgba(255,255,255,0.12)", HOVER="rgba(255,255,255,0.06)",
+        ACTIVE_BG="rgba(95,214,190,0.16)", ACTIVE_RING="rgba(95,214,190,0.50)",
+        NODE_RING="rgba(33,27,53,0.95)", NODE_HOLLOW="#2A2240", NODE_GLYPH="#16122A",
+        INPUT_BG="rgba(255,255,255,0.07)", INPUT_BORDER="rgba(255,255,255,0.14)",
+        INPUT_SHADOW="inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 6px rgba(0,0,0,0.25)",
+        MENU_BG="#2C2442", MENU_HOVER="rgba(95,214,190,0.16)",
+        SIDEBAR_BG="linear-gradient(180deg, rgba(44,36,68,0.94), rgba(33,27,53,0.88))",
+        SIDEBAR_BORDER="rgba(255,255,255,0.08)",
+        SEG_ON_BG="linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08))",
+        SEG_ON_SHADOW=("inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 8px rgba(0,0,0,0.30), "
+                       "0 0 0 1px rgba(95,214,190,0.75), 0 0 16px rgba(95,214,190,0.45)"),
+        STAGE_RING="rgba(255,255,255,0.10)",
+        STAGE_SHADOW="0 2px 4px rgba(0,0,0,0.25), 0 30px 70px rgba(8,4,24,0.55)",
+        BTN_PRIMARY="linear-gradient(180deg, #6FDDC6, #43BFA6)", BTN_PRIMARY_TEXT="#16122A",
+        BTN_SHADOW="0 6px 18px rgba(95,214,190,0.28)", BTN_SECONDARY_BG="rgba(255,255,255,0.08)",
+        ORB_RING="rgba(255,255,255,0.35)", LOGO_GLOW="rgba(150,118,232,0.45)",
+        # map
+        MAP_TILES=_DARK_TILES, MAP_BG="#1E1830",
+        MAP_TINT="sepia(0.6) hue-rotate(218deg) saturate(2.4) brightness(0.95) contrast(1.05)",
+        MAP_SHEEN=("radial-gradient(70% 60% at 12% 8%, rgba(95,214,190,0.10), transparent 70%),"
+                   "radial-gradient(60% 60% at 80% 92%, rgba(150,118,232,0.18), transparent 70%),"
+                   "radial-gradient(45% 45% at 62% 18%, rgba(201,120,176,0.10), transparent 70%),"
+                   "linear-gradient(rgba(74,46,140,0.22), rgba(74,46,140,0.22))"),
+        MAP_CONTROL_BG="rgba(52,43,74,0.88)", MAP_CONTROL_LINE="rgba(255,255,255,0.10)",
+        TOOLTIP_BG="#2C2442",
+        CITY_FILL="#CFC6EC", CITY_RING="#211B35", LABEL_TEXT="#EDE8F7", LABEL_HALO="#1B1530",
+        CASING="#1B1530", CASING_OPACITY=0.85, GLOW_SELECTED=0.34, GLOW=0.24, FADED=0.22,
+        PILL_TEXT="#16122A", MARKER_RING="rgba(27,21,48,0.9)",
+    ),
+}
+THEME_NAMES = {"light": "Light Prism", "dark": "Midnight Prism"}
+
+
+def apply_theme(name):
+    """Make the chosen palette the active one. Every component reads these names when it is drawn."""
+    globals().update(THEMES[name])
+
+
+apply_theme("light")                                  # Light Prism is the default
+
+
+# Layout
+DOCK_WIDTH = 384           # the floating fleet dock on the right
+INSET = 16                 # every floating element sits this far from the map's edge
+STAGE_OFFSET = 116         # page height taken by the header and margins (the map fills the rest)
+R_PANEL = 26               # corner radius: floating panels (ribbon, dock)
+R_INNER = 14               # corner radius: anything inside a panel (inputs, rows, buttons)
+
+# Everything a user can switch on or off (sidebar → Advanced display settings)
+PANELS = ["Fleet numbers", "Map", "Fleet table", "Truck details", "Stops",
+          "Orders not in plan", "City names"]
+
+# Ready-made views: who uses the app, and what they need to see (same as app.py)
+ROLE_PRESETS = {
+    "Dispatcher": ["Fleet numbers", "Map", "Fleet table", "Truck details", "Stops",
+                   "Orders not in plan", "City names"],
+    "Manager":    ["Fleet numbers", "Map", "Fleet table", "Truck details", "Orders not in plan"],
+    "Driver":     ["Map", "Truck details", "Stops", "City names"],
+}
+ROLE_DESCRIPTIONS = {
+    "Dispatcher": "Plans the whole fleet: every truck, every number.",
+    "Manager":    "Follows cost, CO₂ and efficiency across the fleet.",
+    "Driver":     "Sees only their own truck: route, stops and load.",
+}
+
+
+# =============================================================================
+# 2. LOADING DATA
+#    SWAP POINT: when the team's DuckDB tables are ready, only the functions
+#    in this section change. Everything below them stays the same.
+#
+#    Today: each folder inside data/ is one scenario, containing files in the
+#    official API formats: cities.json, trucks.json, orders.json,
+#    distance_matrix.json, plus one or more plan files named plan*.json.
+# =============================================================================
+HERE = Path(__file__).resolve().parent         # full path, so "one folder up" works however it is started
+DATA_DIR = HERE / "data"
+if not DATA_DIR.exists():                     # the prototype lives in a subfolder: use the shared data
+    DATA_DIR = HERE.parent / "data"
+REQUIRED_FILES = ["cities.json", "trucks.json", "orders.json", "distance_matrix.json"]
+
+
+def read_json(path):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def list_scenarios():
+    """Every folder inside data/ that contains a cities.json file."""
+    if not DATA_DIR.exists():
+        return []
+    return sorted(p.name for p in DATA_DIR.iterdir()
+                  if p.is_dir() and (p / "cities.json").exists())
+
+
+def list_plans(scenario):
+    return sorted(p.name for p in (DATA_DIR / scenario).glob("plan*.json"))
+
+
+def load_scenario(scenario):
+    folder = DATA_DIR / scenario
+    missing = [name for name in REQUIRED_FILES if not (folder / name).exists()]
+    if missing:
+        raise FileNotFoundError(f"data/{scenario} is missing: {', '.join(missing)}")
+    return {
+        "cities": {c["id"]: c for c in read_json(folder / "cities.json")},
+        "trucks": {t["id"]: t for t in read_json(folder / "trucks.json")},
+        "orders": {o["id"]: o for o in read_json(folder / "orders.json")},
+        "distances": read_json(folder / "distance_matrix.json"),
+    }
+
+
+def load_plan(scenario, plan_file):
+    return read_json(DATA_DIR / scenario / plan_file)
+
+
+# =============================================================================
+# 3. ROUTE CALCULATIONS
+#    A plan is just a list of stops per truck. Walking through the stops while
+#    keeping a running load (+weight at pickup, -weight at delivery) tells us
+#    which legs are driven loaded or empty, and the km, cost and CO2.
+#    This is NOT the simulator: no time windows, breaks or official score.
+# =============================================================================
+def km_between(data, city_a, city_b):
+    if city_a == city_b:
+        return 0                       # consecutive stops in the same city cost 0 km
+    return data["distances"][city_a][city_b]
+
+
+def analyse_plan(data, plan):
+    trucks_out = {}
+    problems = []
+    completed = set()                  # orders picked up AND delivered correctly
+    taken_by = {}                      # order id -> truck that carries it
+
+    for truck_id, stops in plan.items():
+        truck = data["trucks"].get(truck_id)
+        if truck is None:
+            problems.append(f"The plan mentions truck {truck_id}, which is not in this scenario.")
+            continue
+
+        position = truck["start_city"]
+        on_board = {}                  # order id -> weight currently in the truck
+        load = 0
+        legs, stop_rows, stop_cities = [], [], []
+
+        for number, stop in enumerate(stops, start=1):
+            action, order_id = stop.get("action"), stop.get("order")
+            order = data["orders"].get(order_id)
+            if order is None:
+                problems.append(f"{truck_id}, stop {number}: order {order_id} does not exist.")
+                continue
+            if action not in ("pickup", "delivery"):
+                problems.append(f"{truck_id}, stop {number}: unknown action '{action}'.")
+                continue
+            if taken_by.get(order_id, truck_id) != truck_id:
+                problems.append(f"{order_id} appears on {taken_by[order_id]} and {truck_id}.")
+                continue
+            if action == "delivery" and order_id not in on_board:
+                problems.append(f"{truck_id}, stop {number}: delivery of {order_id} before its pickup.")
+                continue
+            if action == "pickup" and order_id in on_board:
+                problems.append(f"{truck_id}, stop {number}: {order_id} is picked up twice.")
+                continue
+
+            taken_by[order_id] = truck_id
+            city = order["pickup_city"] if action == "pickup" else order["delivery_city"]
+            km = km_between(data, position, city)
+            if km > 0:
+                legs.append({"from": position, "to": city, "km": km, "load_kg": load,
+                             "stop": len(stop_rows) + 1})     # this leg ends at stop number N
+            position = city
+
+            if action == "pickup":
+                on_board[order_id] = order["weight_kg"]
+                load += order["weight_kg"]
+                if load > truck["capacity_kg"]:
+                    problems.append(f"{truck_id}, stop {number}: load {load:,} kg is above capacity "
+                                    f"{truck['capacity_kg']:,} kg (the official simulator rejects this pickup).")
+                needed = order.get("required_truck_type")
+                if needed and needed != truck["type"]:
+                    problems.append(f"{truck_id}: {order_id} needs a {needed} truck, this one is {truck['type']}.")
+            else:
+                load -= on_board.pop(order_id)
+                needed = order.get("required_truck_type")
+                if not needed or needed == truck["type"]:
+                    completed.add(order_id)
+
+            stop_cities.append(city)
+            stop_rows.append({
+                "Action": "▲ Pickup" if action == "pickup" else "▼ Delivery",
+                "Order": order_id,
+                "City": data["cities"][city]["name"],
+                "km": km,
+                "Load (kg)": load,
+            })
+
+        for order_id in on_board:
+            problems.append(f"{truck_id}: {order_id} is picked up but never delivered.")
+
+        total_km = sum(leg["km"] for leg in legs)
+        trucks_out[truck_id] = {
+            "legs": legs,
+            "stops": stop_rows,
+            "stop_cities": stop_cities,
+            "orders": len({row["Order"] for row in stop_rows}),
+            "km": total_km,
+            "loaded_km": sum(leg["km"] for leg in legs if leg["load_kg"] > 0),
+            "cost": total_km * truck["cost_per_km"],
+            "co2": total_km * truck["co2_per_km"],
+            "peak_kg": max((row["Load (kg)"] for row in stop_rows), default=0),
+        }
+
+    not_in_plan = [o for oid, o in data["orders"].items() if oid not in completed]
+    return trucks_out, not_in_plan, problems
+
+
+# =============================================================================
+# 4. GLASS COMPONENTS
+#    One type scale, two corner radii, one inset. Every component is HTML + CSS
+#    fed by the unchanged calculations above.
+# =============================================================================
+def inject_css():
+    st.markdown(f"""
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap');
+
+      /* ---------- Page ---------- */
+      [data-testid="stApp"] {{ background: {PAGE_BG}; background-attachment: fixed; color: {TEXT}; }}
+      [data-testid="stHeader"] {{ background: transparent; }}
+      /* Streamlit's invisible top bar lies over our header: let clicks pass through it,
+         except on its own buttons (open sidebar, menu) */
+      [data-testid="stHeader"], [data-testid="stToolbar"] {{ pointer-events: none; }}
+      [data-testid="stHeader"] button, [data-testid="stHeader"] a {{ pointer-events: auto; color: {TEXT} !important; }}
+      [data-testid="stMainMenu"] {{ display: none; }}
+      [data-testid="stExpandSidebarButton"], [data-testid="stExpandSidebarButton"] *,
+      [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarCollapseButton"] * {{ color: {TEXT} !important; }}   /* developer menu: not needed here, and it crowded the theme toggle */
+      .block-container, [data-testid="stMainBlockContainer"] {{ padding: 12px 22px 14px !important; max-width: none; }}
+      .st-key-topbar {{ padding-bottom: 12px; }}         /* breathing room between the header and the map */
+      [data-testid="stSidebar"] {{ background: {SIDEBAR_BG} !important; backdrop-filter: blur(24px) saturate(160%);
+                                   border-right: 1px solid {SIDEBAR_BORDER}; }}
+      [data-testid="stSidebar"] button, [data-testid="stSidebarCollapseButton"] * {{ color: {TEXT}; }}
+      [data-testid="stSidebar"] hr {{ border-color: {HAIR}; }}
+
+      /* Streamlit's own text follows the active palette too */
+      [data-testid="stWidgetLabel"] p {{ color: {TEXT} !important; }}
+      [data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {{ color: {MUTED} !important; }}
+      [data-testid="stExpander"] summary, [data-testid="stExpander"] summary p,
+      [data-testid="stExpander"] summary span {{ color: {TEXT} !important; }}
+      [data-testid="stExpanderDetails"] p, [data-testid="stExpanderDetails"] li {{ color: {TEXT}; }}
+      [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{ color: {TEXT}; }}
+
+      /* ---------- Type scale (Manrope everywhere; the serif is only the brand) ---------- */
+      .ov   {{ font-size: 0.66rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+               color: {MUTED}; line-height: 1.2; white-space: nowrap; }}
+      .h2   {{ font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; color: {TEXT}; }}
+      .h3   {{ font-size: 1.3rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; color: {TEXT}; }}
+      .vl   {{ font-size: 1.32rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; color: {TEXT};
+               font-variant-numeric: tabular-nums; white-space: nowrap; }}
+      .vm   {{ font-size: 1.02rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; color: {TEXT};
+               font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+      .body {{ font-size: 0.86rem; font-weight: 500; line-height: 1.35; color: {TEXT}; white-space: nowrap; }}
+      .strong {{ font-weight: 700; }}
+      .cap  {{ font-size: 0.74rem; font-weight: 500; line-height: 1.3; color: {MUTED}; white-space: nowrap;
+               overflow: hidden; text-overflow: ellipsis; }}
+      .unit {{ font-size: 0.68em; font-weight: 600; color: {MUTED}; margin-left: 3px; letter-spacing: 0; }}
+      .muted {{ color: {MUTED}; font-weight: 500; }}
+
+      /* ---------- Glass ---------- */
+      .lg, .st-key-dock, .st-key-dock_static, .st-key-picker, .st-key-role [role="radiogroup"],
+      .st-key-theme_toggle button {{
+          position: relative; isolation: isolate; background: {GLASS};
+          backdrop-filter: blur(26px) saturate(190%); -webkit-backdrop-filter: blur(26px) saturate(190%);
+          border: 1px solid {GLASS_BORDER}; box-shadow: {EDGE}, {LIFT};
+      }}
+      /* specular light: a soft highlight from the top-left, tinted by the selected truck's colour */
+      .lg::before, .st-key-dock::before, .st-key-dock_static::before, .st-key-picker::before {{
+          content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: -1;
+          background:
+            radial-gradient(110% 55% at 10% -8%, {SHEEN}, rgba(255,255,255,0) 58%),
+            radial-gradient(70% 30% at 85% -4%, color-mix(in srgb, var(--truck, {ACCENT}) {TRUCK_TINT}, transparent), transparent 70%);
+      }}
+      /* prismatic rim */
+      .lg::after, .st-key-dock::after, .st-key-dock_static::after, .st-key-picker::after {{
+          content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.2px; pointer-events: none;
+          background: {PRISM}; opacity: {RIM_OPACITY};
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor; mask-composite: exclude;
+      }}
+      .hair {{ height: 1px; background: {HAIR}; box-shadow: 0 1px 0 {HAIR_SHADOW}; }}
+
+      /* ---------- Header ---------- */
+      .brand {{ display: flex; align-items: center; gap: 14px; padding-left: 40px; min-width: 0; }}
+      .orb-logo {{ width: 38px; height: 38px; border-radius: 50%; flex: none;
+                   background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.95) 0 16%, rgba(255,255,255,0) 42%), {PRISM};
+                   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), inset 0 -6px 12px rgba(120,100,180,0.25),
+                               0 8px 20px {LOGO_GLOW}; }}
+      .brand-title {{ font-family: {BRAND_FONT}; font-size: 1.95rem; line-height: 1; color: {TEXT}; white-space: nowrap; }}
+      .brand-title span {{ background: {SPECTRAL}; -webkit-background-clip: text; background-clip: text; color: transparent;
+                           padding-right: 2px; }}
+      .brand .ov {{ margin-top: 6px; letter-spacing: 0.16em; }}
+      .chips {{ display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }}
+      .chip {{ display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px;
+               font-size: 0.78rem; font-weight: 600; color: {TEXT}; white-space: nowrap; }}
+      .chip .dot {{ width: 8px; height: 8px; border-radius: 50%; flex: none; }}
+
+      /* Role switch: one glass capsule, the active role lit from inside */
+      .st-key-role [data-testid="stButtonGroup"] {{ display: flex; justify-content: flex-end; }}
+      .st-key-role [role="radiogroup"] {{ display: inline-flex; flex-wrap: nowrap; gap: 2px; padding: 4px;
+                                          border-radius: 999px; }}
+      .st-key-role button {{ border: none !important; background: transparent !important; box-shadow: none !important;
+                             border-radius: 999px !important; padding: 6px 16px !important; min-height: 0 !important;
+                             color: {MUTED} !important; font-weight: 600; transition: background .2s ease, box-shadow .2s ease; }}
+      .st-key-role button p {{ font-size: 0.84rem !important; color: inherit !important; }}
+      .st-key-role button[aria-checked="true"] {{ color: {TEXT} !important; background: {SEG_ON_BG} !important;
+                                                  box-shadow: {SEG_ON_SHADOW} !important; }}
+
+      /* Theme toggle: one round glass button with a sun or moon */
+      .st-key-theme_toggle {{ display: flex; justify-content: flex-end; }}
+      .st-key-theme_toggle button {{ width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50% !important;
+                                     color: {TEXT} !important; transition: transform .15s ease; }}
+      .st-key-theme_toggle button:hover {{ transform: scale(1.05); }}
+      .st-key-theme_toggle button:active {{ transform: scale(0.96); }}
+      .st-key-theme_toggle button span {{ font-size: 1.2rem; color: {TEXT} !important; }}
+
+      /* ---------- Stage: the map fills the screen, glass floats above it ---------- */
+      .st-key-stage {{ position: relative; gap: 0 !important; border-radius: 30px; overflow: hidden;
+                       box-shadow: 0 0 0 1px {STAGE_RING}, {STAGE_SHADOW}; }}
+      iframe[title="streamlit_folium.st_folium"] {{ height: calc(100vh - {STAGE_OFFSET}px) !important;
+                                                    min-height: 460px; display: block; }}
+      .st-key-ribbon_slot {{ position: absolute; top: {INSET}px; left: {INSET}px; z-index: 6;
+                             max-width: calc(100% - {DOCK_WIDTH}px - {3 * INSET}px); }}
+      .st-key-legend_slot {{ position: absolute; left: {INSET}px; bottom: {INSET}px; z-index: 6;
+                             max-width: calc(100% - {DOCK_WIDTH}px - {3 * INSET}px); }}
+      .st-key-ribbon_static {{ margin-bottom: 4px; }}
+
+      /* ---------- Ribbon: label / value / caption on three shared lines ---------- */
+      .ribbon {{ width: fit-content; display: flex; flex-wrap: wrap; row-gap: 12px; padding: 14px 6px;
+                 border-radius: {R_PANEL}px; }}
+      .ribbon .cell {{ padding: 0 16px; display: flex; flex-direction: column; gap: 3px; }}
+      .ribbon .cell + .cell {{ border-left: 1px solid {HAIR}; box-shadow: -1px 0 0 {HAIR_SHADOW}; }}
+      .ribbon .vl, .ribbon .score {{ height: 1.75rem; display: flex; align-items: flex-end; }}
+      .ribbon .score {{ font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;
+                        background: {SPECTRAL}; -webkit-background-clip: text; background-clip: text; color: transparent; }}
+
+      /* ---------- Dock: one glass surface, sections divided by space and hairlines ---------- */
+      .st-key-dock {{ position: absolute !important; top: {INSET}px; right: {INSET}px; bottom: {INSET}px;
+                      width: {DOCK_WIDTH}px; z-index: 6; border-radius: {R_PANEL}px; padding: 18px 18px 6px; gap: 12px;
+                      overflow: hidden; }}
+      .st-key-picker {{ position: absolute !important; top: {INSET}px; right: {INSET}px; width: 320px; z-index: 6;
+                        border-radius: {R_PANEL}px; padding: 16px 18px; gap: 10px; }}
+      .st-key-dock_static {{ max-width: 760px; margin: 0 auto; border-radius: {R_PANEL}px; padding: 18px; gap: 12px; }}
+      .st-key-dock > div:has(.st-key-dock_scroll) {{ flex: 1 1 auto; min-height: 0; }}
+      /* The scroll area reaches past the content edge on each side, so marker rings and glows
+         have room and are never clipped; a soft fade at the bottom signals more content. */
+      .st-key-dock_scroll {{ height: 100%; overflow-y: auto; overflow-x: hidden; margin: 0 -10px; padding: 2px 10px 22px;
+                             gap: 14px; -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent);
+                             mask-image: linear-gradient(#000 calc(100% - 22px), transparent); }}
+      .st-key-dock_static .st-key-dock_scroll {{ height: auto; overflow: visible; -webkit-mask-image: none; mask-image: none; }}
+      .st-key-dock_scroll::-webkit-scrollbar {{ width: 6px; }}
+      .st-key-dock_scroll::-webkit-scrollbar-thumb {{ background: {TRACK}; border-radius: 999px; }}
+      .st-key-dock [data-testid="stMarkdownContainer"], .st-key-dock_static [data-testid="stMarkdownContainer"],
+      .st-key-picker [data-testid="stMarkdownContainer"] {{ margin-bottom: 0 !important; }}
+      .dock-head {{ display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }}
+
+      /* Inputs and their menus */
+      [data-testid="stSelectbox"] [role="group"] {{ background: {INPUT_BG} !important; border-radius: {R_INNER}px !important;
+            border: 1px solid {INPUT_BORDER} !important; box-shadow: {INPUT_SHADOW}; }}
+      [data-testid="stSelectbox"] [role="group"]:focus-within {{ box-shadow: 0 0 0 3px {ACTIVE_RING}; }}
+      [data-testid="stSelectbox"] input[role="combobox"] {{ font-size: 0.86rem; font-weight: 600; color: {TEXT} !important;
+                                                            -webkit-text-fill-color: {TEXT}; }}
+      [data-testid="stSelectbox"] button, [data-testid="stSelectbox"] svg {{ color: {MUTED} !important; }}
+      [data-testid="stSelectboxVirtualDropdown"] {{ background: {MENU_BG} !important; border: 1px solid {INPUT_BORDER};
+                                                    border-radius: {R_INNER}px; box-shadow: {LIFT}; }}
+      [data-testid="stSelectboxVirtualDropdown"] [role="option"] {{ color: {TEXT} !important; font-size: 0.86rem; }}
+      [data-testid="stSelectboxVirtualDropdown"] [role="option"]:hover,
+      [data-testid="stSelectboxVirtualDropdown"] [role="option"][aria-selected="true"] {{ background: {MENU_HOVER} !important; }}
+      [data-testid="stExpander"] details {{ background: {INPUT_BG}; border: 1px solid {INPUT_BORDER}; border-radius: {R_INNER}px; }}
+      .st-key-panels button {{ border-radius: 999px; background: {INPUT_BG}; border-color: {INPUT_BORDER}; color: {TEXT}; }}
+      .st-key-panels button[aria-checked="true"], .st-key-panels button[aria-pressed="true"] {{
+          background: {ACTIVE_BG}; border-color: {ACTIVE_RING}; }}
+      .st-key-panels button p {{ color: {TEXT} !important; }}
+
+      .orb {{ width: 14px; height: 14px; border-radius: 50%; flex: none;
+              background: radial-gradient(circle at 32% 28%, #FFFFFF 0 14%, var(--c) 52%, color-mix(in srgb, var(--c) 70%, #000) 100%);
+              box-shadow: 0 0 0 2px {ORB_RING}, 0 0 10px color-mix(in srgb, var(--c) 70%, transparent); }}
+      .orb.big {{ width: 24px; height: 24px; }}
+      .section-head {{ display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }}
+
+      /* Fleet list: rows, not cards */
+      .list {{ display: flex; flex-direction: column; gap: 2px; }}
+      .row {{ display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+              padding: 9px 10px; border-radius: {R_INNER}px; transition: background .2s ease; }}
+      .row:hover {{ background: {HOVER}; }}
+      .row.active {{ background: {ACTIVE_BG}; box-shadow: inset 0 0 0 1px {ACTIVE_RING}; }}
+      .row .main {{ min-width: 0; }}
+      .row .side {{ text-align: right; }}
+      .meter {{ display: inline-block; vertical-align: middle; width: 56px; height: 5px; border-radius: 999px;
+                background: {TRACK}; overflow: hidden; }}
+      .meter > i {{ display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, {AQUA}, {ACCENT}); }}
+      .meter.over > i {{ background: {RED}; }}
+      .metric-line {{ display: flex; align-items: center; justify-content: flex-end; gap: 8px; }}
+
+      /* Truck identity + numbers */
+      .identity {{ display: flex; align-items: center; gap: 12px; }}
+      .identity > div {{ min-width: 0; }}
+      .grid3 {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 14px; }}
+      .grid3 > div {{ padding-left: 12px; border-left: 1px solid {HAIR}; min-width: 0; }}
+      .grid3 > div:nth-child(3n+1) {{ padding-left: 0; border-left: none; }}
+      .grid3 .vm {{ margin-top: 3px; }}
+
+      /* Stop timeline: the line runs exactly through the marker centres (marker 22px, centre at 19px) */
+      .timeline {{ position: relative; }}
+      .stop {{ position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 12px;
+               padding: 8px 8px 8px 6px; border-radius: {R_INNER}px; }}
+      .stop::before {{ content: ""; position: absolute; left: 16px; width: 2px; top: 0; bottom: 0;
+                       background: color-mix(in srgb, var(--c) 40%, transparent); }}
+      .stop:first-child::before {{ top: 19px; }}
+      .stop:last-child::before {{ bottom: auto; height: 19px; }}
+      .stop:only-child::before {{ display: none; }}
+      .node {{ position: relative; z-index: 1; width: 22px; height: 22px; border-radius: 50%; display: grid;
+               place-items: center; font-size: 9px; line-height: 1; }}
+      .stop.pick .node {{ background: var(--c); color: {NODE_GLYPH}; box-shadow: 0 0 0 3px {NODE_RING}; }}
+      .stop.drop .node {{ background: {NODE_HOLLOW}; color: var(--c); box-shadow: inset 0 0 0 2px var(--c), 0 0 0 3px {NODE_RING}; }}
+      .stop .l1, .stop .l2 {{ display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }}
+      .stop .l2 {{ margin-top: 2px; }}
+      .stop .l1 > :first-child, .stop .l2 > :first-child {{ overflow: hidden; text-overflow: ellipsis; }}
+      .stop .load {{ display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: none; }}
+      .stop .load .cap {{ width: 46px; text-align: right; }}
+      .stop.done .node, .stop.done .l1, .stop.done .l2 {{ opacity: 0.45; }}
+      .stop.current {{ background: {ACTIVE_BG}; box-shadow: inset 0 0 0 1px {ACTIVE_RING}; }}
+      .stop.current .node {{ box-shadow: 0 0 0 3px {NODE_RING}, 0 0 0 5px {ACTIVE_RING}; }}
+
+      /* Driver progress */
+      .progress {{ height: 4px; border-radius: 999px; background: {TRACK}; overflow: hidden; }}
+      .progress > i {{ display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, {AQUA}, {ACCENT}); }}
+      .st-key-dock_scroll [data-testid="stBaseButton-primary"] {{
+          background: {BTN_PRIMARY}; border: none; border-radius: {R_INNER}px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.40), {BTN_SHADOW}; }}
+      .st-key-dock_scroll [data-testid="stBaseButton-primary"] p {{ color: {BTN_PRIMARY_TEXT} !important; }}
+      .st-key-dock_scroll [data-testid="stBaseButton-secondary"] {{
+          background: {BTN_SECONDARY_BG}; border: 1px solid {INPUT_BORDER}; border-radius: {R_INNER}px;
+          box-shadow: {INPUT_SHADOW}; }}
+      .st-key-dock_scroll [data-testid="stBaseButton-secondary"] p {{ color: {TEXT} !important; }}
+      .st-key-dock_scroll button p {{ font-size: 0.84rem; font-weight: 700; }}
+
+      /* ---------- Legend ---------- */
+      .legend {{ width: fit-content; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 8px 16px;
+                 border-radius: 999px; }}
+      .legend span {{ display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 0.74rem;
+                      font-weight: 500; color: {MUTED}; }}
+
+      @media (prefers-reduced-motion: reduce) {{ * {{ transition: none !important; }} }}
+    </style>""", unsafe_allow_html=True)
+
+
+def html(markup):
+    st.markdown(markup, unsafe_allow_html=True)
+
+
+def truck_colours(data):
+    return {tid: TRUCK_COLOURS[i % len(TRUCK_COLOURS)] for i, tid in enumerate(sorted(data["trucks"]))}
+
+
+def compact(n):
+    """6500 -> 6.5K, 11000 -> 11K, 900 -> 900"""
+    return f"{n / 1000:.1f}".rstrip("0").rstrip(".") + "K" if n >= 1000 else f"{n:,}"
+
+
+def meter(value, maximum):
+    share = 0 if not maximum else min(100, 100 * value / maximum)
+    over = " over" if maximum and value > maximum else ""
+    return f'<span class="meter{over}"><i style="width:{share:.0f}%"></i></span>'
+
+
+def brand_html():
+    html('<div class="brand"><div class="orb-logo"></div><div style="min-width:0">'
+         '<div class="brand-title">Fleet <span>Control Tower</span></div>'
+         '<div class="ov">GRUBER Logistics Grand Prix &nbsp;/&nbsp; NOI Hackathon 2026</div></div></div>')
+
+
+def chips_html(scenario, plan_file, problems, show_checks):
+    is_demo = scenario.startswith("demo")
+    data_chip = (f'<span class="chip lg" title="data/{escape(scenario)}/{escape(plan_file)}'
+                 f'{" (invented trucks and orders)" if is_demo else ""}. Change it in the sidebar.">'
+                 f'<span class="dot" style="background:{MAUVE if is_demo else ACCENT}"></span>'
+                 f'{"Demo data" if is_demo else escape(scenario)}</span>')
+    check = ""
+    if show_checks:
+        if problems:
+            check = (f'<span class="chip lg" title="Each official violation costs 20 points. Details in the panel.">'
+                     f'<span class="dot" style="background:{RED};box-shadow:0 0 8px {RED}"></span>'
+                     f'{len(problems)} rule problem{"s" if len(problems) != 1 else ""}</span>')
+        else:
+            check = (f'<span class="chip lg" title="Capacity, truck types and pickup-before-delivery look fine. '
+                     f'Time windows are checked by the simulator.">'
+                     f'<span class="dot" style="background:{ACCENT};box-shadow:0 0 8px {AQUA}"></span>Checks passed</span>')
+    html(f'<div class="chips">{data_chip}{check}</div>')
+
+
+def ribbon_html(data, analysis, not_in_plan):
+    total_km = sum(t["km"] for t in analysis.values())
+    loaded_km = sum(t["loaded_km"] for t in analysis.values())
+    used = sum(1 for t in analysis.values() if t["km"] > 0 or t["orders"] > 0)
+    done = len(data["orders"]) - len(not_in_plan)
+    cost = sum(t["cost"] for t in analysis.values())
+    co2 = sum(t["co2"] for t in analysis.values())
+    loaded = f'{100 * loaded_km / total_km:.0f}<span class="unit">%</span>' if total_km else "—"
+    cell = lambda label, value, caption, tip: (f'<div class="cell" title="{escape(tip)}"><div class="ov">{label}</div>'
+                                               f'<div class="vl">{value}</div><div class="cap">{caption}</div></div>')
+    html('<div class="ribbon lg">'
+         '<div class="cell" title="The official score comes from the simulator or the organizers\' API">'
+         '<div class="ov">Official score</div><div class="score">—</div><div class="cap">awaiting simulator</div></div>'
+         + cell("Orders planned", f'{done}<span class="unit">/ {len(data["orders"])}</span>', "not yet official",
+                "Orders this plan picks up and delivers. Official fulfillment comes from the simulator.")
+         + cell("Distance", f'{total_km:,}<span class="unit">km</span>', f"{used} of {len(data['trucks'])} trucks",
+                "Total km driven by all trucks, from the distance matrix")
+         + cell("Driven loaded", loaded, "official formula", "Share of km driven with at least one order on board")
+         + cell("Cost", f"€{cost:,.0f}", "local estimate", "km × each truck's €/km")
+         + cell("CO₂", f'{co2:,.0f}<span class="unit">kg</span>', "local estimate", "km × each truck's CO₂/km")
+         + "</div>")
+
+
+def dock_head_html(title, meta):
+    html(f'<div class="dock-head"><div class="h2">{escape(title)}</div><div class="cap">{escape(meta)}</div></div>')
+
+
+def fleet_list_html(data, analysis, colours, role, highlight=None):
+    rows = ""
+    for tid, truck in sorted(data["trucks"].items()):
+        a = analysis.get(tid, {"orders": 0, "km": 0, "loaded_km": 0, "peak_kg": 0, "cost": 0, "co2": 0})
+        loaded = f"{100 * a['loaded_km'] / a['km']:.0f}% loaded" if a["km"] else "not used"
+        if role == "Manager":          # managers care about money and emissions
+            main = (f'<div class="body"><span class="strong">{escape(tid)}</span> <span class="muted">· {a["km"]:,} km</span></div>'
+                    f'<div class="cap">{loaded}</div>')
+            side = f'<div class="body strong">€{a["cost"]:,.0f}</div><div class="cap">{a["co2"]:,.0f} kg CO₂</div>'
+        else:
+            peak = 100 * a["peak_kg"] / truck["capacity_kg"]
+            main = (f'<div class="body"><span class="strong">{escape(tid)}</span> '
+                    f'<span class="muted">· {escape(truck["type"])} · {a["orders"]} orders</span></div>'
+                    f'<div class="cap">{a["km"]:,} km · {loaded}</div>')
+            side = (f'<div class="ov" style="font-size:0.6rem">Peak load</div>'
+                    f'<div class="metric-line">{meter(a["peak_kg"], truck["capacity_kg"])}'
+                    f'<span class="cap" style="width:32px;text-align:right">{peak:.0f}%</span></div>')
+        rows += (f'<div class="row{" active" if tid == highlight else ""}">'
+                 f'<span class="orb" style="--c:{colours[tid]}"></span><div class="main">{main}</div>'
+                 f'<div class="side">{side}</div></div>')
+    html(f'<div class="list">{rows}</div>')
+
+
+def identity_html(data, colours, tid, with_costs=False):
+    truck = data["trucks"][tid]
+    facts = (f"{truck['type'].capitalize()} · {truck['capacity_kg']:,} kg · "
+             f"starts in {data['cities'][truck['start_city']]['name']}")
+    if with_costs:
+        facts += f" · €{truck['cost_per_km']}/km"
+    html(f'<div class="identity"><span class="orb big" style="--c:{colours[tid]}"></span><div>'
+         f'<div class="h3">{escape(tid)}</div><div class="cap" title="{escape(facts)}">{escape(facts)}</div></div></div>')
+
+
+def numbers_html(data, analysis, tid):
+    truck, a = data["trucks"][tid], analysis[tid]
+    loaded = f"{100 * a['loaded_km'] / a['km']:.0f}%" if a["km"] else "—"
+    cell = lambda k, v: f'<div><div class="ov">{k}</div><div class="vm">{v}</div></div>'
+    html('<div class="grid3">'
+         + cell("Distance", f'{a["km"]:,}<span class="unit">km</span>') + cell("Driven loaded", loaded)
+         + cell("Peak load", f"{100 * a['peak_kg'] / truck['capacity_kg']:.0f}%")
+         + cell("Cost", f"€{a['cost']:,.0f}") + cell("CO₂", f'{a["co2"]:,.0f}<span class="unit">kg</span>')
+         + cell("Orders", f"{a['orders']}") + "</div>")
+
+
+def timeline_html(data, analysis, colours, tid, done=None):
+    """done=None: planner view. done=N: driver view, the first N stops are confirmed."""
+    truck, stops = data["trucks"][tid], analysis[tid]["stops"]
+    c = colours[tid]
+    items = ""
+    first = done - 1 if (done is not None and done >= 2) else 0     # driver: keep the last finished stop visible
+    folded = (f'<div class="cap" style="margin:0 0 4px 34px">✓ {first} earlier stop{"s" if first != 1 else ""} completed</div>'
+              if first else "")
+    for i, s in enumerate(stops):
+        if i < first:
+            continue
+        pick = "Pickup" in s["Action"]
+        state = "" if done is None else (" done" if i < done else (" current" if i == done else ""))
+        items += (f'<div class="stop {"pick" if pick else "drop"}{state}" style="--c:{c}">'
+                  f'<div class="node">{"▲" if pick else "▼"}</div><div style="min-width:0">'
+                  f'<div class="l1"><span class="body strong">{"Pickup" if pick else "Delivery"} '
+                  f'<span class="muted">{escape(s["Order"])}</span></span><span class="cap">+{s["km"]:,} km</span></div>'
+                  f'<div class="l2"><span class="body">{escape(s["City"])}</span><span class="load">'
+                  f'{meter(s["Load (kg)"], truck["capacity_kg"])}<span class="cap">{compact(s["Load (kg)"])} kg</span>'
+                  f'</span></div></div></div>')
+    note = ("Arrival times and lateness will appear once simulator results are connected." if done is None else "")
+    html(f'<div class="section-head"><span class="ov">Stop sequence</span><span class="cap">{len(stops)} stops</span></div>'
+         f'{folded}<div class="timeline">{items}</div>' + (f'<div class="cap" style="margin-top:8px">{note}</div>' if note else ""))
+
+
+def next_up_html(data, analysis, tid, done):
+    truck, stops = data["trucks"][tid], analysis[tid]["stops"]
+    ahead = stops[done:]
+    nxt_pick = next((s for s in ahead if "Pickup" in s["Action"]), None)
+    nxt_drop = next((s for s in ahead if "Delivery" in s["Action"]), None)
+    load_now = stops[done - 1]["Load (kg)"] if done > 0 else 0
+    cell = lambda k, v, c: (f'<div><div class="ov">{k}</div><div class="vm" title="{escape(v)}">{escape(v)}</div>'
+                            f'<div class="cap">{c}</div></div>')
+    html('<div class="grid3">'
+         + cell("Next pickup", nxt_pick["City"] if nxt_pick else "None left", f"Order {nxt_pick['Order']}" if nxt_pick else "&nbsp;")
+         + cell("Next delivery", nxt_drop["City"] if nxt_drop else "None left", f"Order {nxt_drop['Order']}" if nxt_drop else "&nbsp;")
+         + f'<div><div class="ov">Load on board</div><div class="vm">{load_now:,}<span class="unit">kg</span></div>'
+           f'<div class="cap">{100 * load_now / truck["capacity_kg"]:.0f}% of {compact(truck["capacity_kg"])} kg</div></div>'
+         + "</div>")
+
+
+def legend_html(show_unplanned=True, show_here=False):
+    solid = f'<svg width="28" height="8"><line x1="1" y1="4" x2="27" y2="4" stroke="{MUTED}" stroke-width="3" stroke-linecap="round"/></svg>'
+    dashed = f'<svg width="28" height="8"><line x1="1" y1="4" x2="27" y2="4" stroke="{MUTED}" stroke-width="3" stroke-dasharray="5 5"/></svg>'
+    city = (f'<svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="{CITY_FILL}" fill-opacity="0.55" '
+            f'stroke="{CITY_RING}" stroke-width="1.5"/></svg>')
+    ring = f'<svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="none" stroke="{RED}" stroke-width="2"/></svg>'
+    here = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5" fill="{TEXT}" stroke="{ACCENT}" stroke-width="3"/></svg>'
+    html(f'<div class="legend lg"><span>{solid} Loaded</span><span>{dashed} Empty</span>'
+         f'<span><span style="color:{MUTED}">►</span> Direction</span><span>{city} City, size = orders</span>'
+         + (f'<span>{ring} Not in plan</span>' if show_unplanned else "")
+         + (f'<span>{here} You are here</span>' if show_here else "") + "</div>")
+
+
+# =============================================================================
+# 5. THE MAP
+#    Same routes and logic as app.py; Prism styling: pale tinted tiles,
+#    a pearlescent sheen, white casing and a soft glow under every route.
+# =============================================================================
+def map_css():
+    return f"""<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&display=swap');
+  html, body {{ height: 100%; margin: 0; }}
+  .folium-map, .leaflet-container {{ height: 100vh !important; background: {MAP_BG} !important;
+                                     font-family: Manrope, sans-serif; }}
+  .leaflet-tile-pane {{ filter: {MAP_TINT}; }}
+  .leaflet-container::after {{ content: ""; position: absolute; inset: 0; z-index: 350; pointer-events: none;
+                               background: {MAP_SHEEN}; }}
+  .leaflet-top.leaflet-left {{ top: 50%; transform: translateY(-50%); }}
+  .leaflet-bar {{ border: none !important; border-radius: 14px !important; overflow: hidden;
+                  box-shadow: {EDGE}, 0 6px 18px rgba(20,16,40,0.22) !important; }}
+  .leaflet-bar a {{ background: {MAP_CONTROL_BG} !important; color: {TEXT} !important;
+                    width: 34px !important; height: 34px !important; line-height: 34px !important;
+                    border-bottom: 1px solid {MAP_CONTROL_LINE} !important; }}
+  .leaflet-control-attribution {{ background: {MAP_CONTROL_BG} !important; border-radius: 8px;
+                                  font-size: 10px; color: {MUTED}; margin: 0 0 6px 0 !important; }}
+  .leaflet-control-attribution a {{ color: {ACCENT}; }}
+  .leaflet-tooltip {{ font-family: Manrope, sans-serif; border: none; border-radius: 10px; background: {TOOLTIP_BG};
+                      box-shadow: 0 6px 18px rgba(20,16,40,0.25); color: {TEXT}; }}
+  .leaflet-tooltip-top:before {{ border-top-color: {TOOLTIP_BG}; }}
+  .leaflet-tooltip-bottom:before {{ border-bottom-color: {TOOLTIP_BG}; }}
+  .leaflet-tooltip-left:before {{ border-left-color: {TOOLTIP_BG}; }}
+  .leaflet-tooltip-right:before {{ border-right-color: {TOOLTIP_BG}; }}
+</style>"""
+
+
+def curve_points(a, b, bend, steps=24):
+    """A gentle arc from a to b that bends to the RIGHT of the direction of travel.
+    So A->B and B->A never sit on top of each other, and each truck gets its own bend.
+    The lines are schematic (like a metro map): real km always come from the matrix."""
+    (lat1, lon1), (lat2, lon2) = a, b
+    squeeze = math.cos(math.radians((lat1 + lat2) / 2))     # 1 degree of longitude is shorter than 1 of latitude
+    x1, y1, x2, y2 = lon1 * squeeze, lat1, lon2 * squeeze, lat2
+    dx, dy = x2 - x1, y2 - y1
+    cx, cy = (x1 + x2) / 2 + dy * bend, (y1 + y2) / 2 - dx * bend   # control point, pushed to the right
+    points = []
+    for i in range(steps + 1):
+        t = i / steps
+        x = (1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2
+        y = (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2
+        points.append([y, x / squeeze])
+    return points
+
+
+def build_map(data, analysis, not_in_plan, selected, show_names=True, show_unplanned=True,
+              only_selected=False, done_stops=None, here_city=None, pad_top=130, pad_right=DOCK_WIDTH + 70):
+    cities, colours = data["cities"], truck_colours(data)
+    truck_number = {tid: i for i, tid in enumerate(sorted(data["trucks"]))}
+    point = lambda cid: [cities[cid]["latitude"], cities[cid]["longitude"]]
+
+    lats = [c["latitude"] for c in cities.values()]
+    lons = [c["longitude"] for c in cities.values()]
+    m = folium.Map(location=[sum(lats) / len(lats), sum(lons) / len(lons)], zoom_start=6,
+                   tiles=MAP_TILES, attr=MAP_CREDIT)
+    m.get_root().header.add_child(folium.Element(
+        map_css() + f"<style>.leaflet-bottom.leaflet-right {{ right: {max(pad_right - 40, 0)}px; }}</style>"))
+    if only_selected and selected in analysis:          # driver view: zoom to this truck's own route
+        route = [data["trucks"][selected]["start_city"]] + [leg["to"] for leg in analysis[selected]["legs"]]
+        lats = [cities[c]["latitude"] for c in route]
+        lons = [cities[c]["longitude"] for c in route]
+    # Keep the routes clear of the floating glass panels
+    m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]],
+                 padding_top_left=(70, pad_top), padding_bottom_right=(pad_right, 80))
+
+    # Routes. The selected truck is drawn last so it sits on top.
+    draw_order = [t for t in analysis if t != selected] + ([selected] if selected in analysis else [])
+    for tid in draw_order:
+        if only_selected and tid != selected:
+            continue                                   # driver view: other trucks are not shown at all
+        focused = selected is None or tid == selected
+        is_selected = tid == selected
+        colour = colours[tid]
+        for leg in analysis[tid]["legs"]:
+            loaded = leg["load_kg"] > 0
+            finished = done_stops is not None and is_selected and leg["stop"] <= done_stops
+            bend = 0.10 + 0.05 * (truck_number[tid] % 4)
+            points = curve_points(point(leg["from"]), point(leg["to"]), bend)
+            if focused and not finished:
+                # glow: a wide, soft band in the truck's colour
+                folium.PolyLine(points, color=colour, weight=17 if is_selected else 11,
+                                opacity=GLOW_SELECTED if is_selected else GLOW).add_to(m)
+                if loaded:   # a casing in the map's own tone keeps the line crisp
+                    folium.PolyLine(points, color=CASING, weight=8 if is_selected else 6.5,
+                                    opacity=CASING_OPACITY).add_to(m)
+            style = {"color": colour, "weight": 4.5 if is_selected else 3.5,
+                     "opacity": 0.3 if finished else (1.0 if focused else FADED)}
+            if not loaded:
+                style["dash_array"] = "7 8"
+            what = f"carrying {leg['load_kg']:,} kg" if loaded else "driving empty"
+            line = folium.PolyLine(
+                points, tooltip=f"{tid}: {cities[leg['from']]['name']} → {cities[leg['to']]['name']}, "
+                                f"{leg['km']:,} km, {what}", **style).add_to(m)
+            if focused and not finished:
+                PolyLineTextPath(line, "►", center=True, offset=5,
+                                 attributes={"fill": colour, "font-size": "14"}).add_to(m)
+
+    # Cities: soft graphite pearls, area grows with the number of orders
+    pickups = {cid: 0 for cid in cities}
+    deliveries = {cid: 0 for cid in cities}
+    for o in data["orders"].values():
+        pickups[o["pickup_city"]] += 1
+        deliveries[o["delivery_city"]] += 1
+    busiest = max(pickups[c] + deliveries[c] for c in cities) or 1
+    for cid, c in cities.items():
+        volume = pickups[cid] + deliveries[cid]
+        folium.CircleMarker(
+            point(cid), radius=4 + 8 * math.sqrt(volume / busiest),
+            color=CITY_RING, weight=1.5, fill=True, fill_color=CITY_FILL, fill_opacity=0.55,
+            tooltip=f"{c['name']} ({c['country']}): {pickups[cid]} pickups, {deliveries[cid]} deliveries",
+        ).add_to(m)
+        if show_names:
+            folium.Marker(point(cid), icon=folium.DivIcon(
+                icon_size=(140, 18), icon_anchor=(-12, 22),
+                html=f'<div style="color:{LABEL_TEXT};font-size:12px;font-weight:600;white-space:nowrap;'
+                     f'font-family:Manrope,sans-serif;pointer-events:none;'
+                     f'text-shadow:0 0 3px {LABEL_HALO},0 0 3px {LABEL_HALO},0 0 6px {LABEL_HALO}">{c["name"]}</div>',
+            )).add_to(m)
+
+    # Truck start labels: glossy pills in the truck colour
+    stacked = {}
+    for tid in analysis:
+        if only_selected and tid != selected:
+            continue
+        start = data["trucks"][tid]["start_city"]
+        level = stacked.get(start, 0)
+        stacked[start] = level + 1
+        faded = selected is not None and tid != selected
+        folium.Marker(point(start), icon=folium.DivIcon(
+            icon_size=(42, 20), icon_anchor=(52, 10 + 22 * level),
+            html=f'<div style="background:{colours[tid]};color:{PILL_TEXT};font-size:11px;font-weight:700;'
+                 f'font-family:Manrope,sans-serif;border-radius:10px;padding:2px 8px;text-align:center;'
+                 f'opacity:{0.3 if faded else 1};box-shadow:0 0 0 2px {MARKER_RING},'
+                 f'0 4px 12px {colours[tid]}77">{tid}</div>',
+        ), tooltip=f"{tid} starts here").add_to(m)
+
+    # Driver view: where the truck is now
+    if here_city is not None:
+        folium.CircleMarker(point(here_city), radius=8, color=ACCENT, weight=4, fill=True,
+                            fill_color=TEXT, fill_opacity=1, tooltip="You are here").add_to(m)
+        folium.Marker(point(here_city), icon=folium.DivIcon(
+            icon_size=(100, 18), icon_anchor=(50, -12),
+            html=f'<div style="text-align:center;color:{LABEL_TEXT};font-size:11px;font-weight:700;'
+                 f'font-family:Manrope,sans-serif;pointer-events:none;'
+                 f'text-shadow:0 0 3px {LABEL_HALO},0 0 3px {LABEL_HALO},0 0 6px {LABEL_HALO}">You are here</div>',
+        )).add_to(m)
+
+    # Red rings: orders that no truck completes, with a count badge (shape + number, not colour alone)
+    if show_unplanned:
+        by_city = {}
+        for o in not_in_plan:
+            by_city.setdefault(o["pickup_city"], []).append(o)
+        for cid, orders in by_city.items():
+            listing = "<br>".join(f"{o['id']} to {cities[o['delivery_city']]['name']} "
+                                  f"({o['weight_kg']:,} kg{', ' + o['required_truck_type'] if o.get('required_truck_type') else ''})"
+                                  for o in orders)
+            folium.CircleMarker(point(cid), radius=16, color=RED, weight=2, fill=False,
+                                tooltip=f"<b>Not in the plan</b><br>{listing}").add_to(m)
+            folium.Marker(point(cid), icon=folium.DivIcon(
+                icon_size=(20, 16), icon_anchor=(10, 36),
+                html=f'<div style="background:{RED};color:#fff;font-size:10px;font-weight:700;border-radius:8px;'
+                     f'font-family:Manrope,sans-serif;text-align:center;line-height:16px;'
+                     f'box-shadow:0 0 0 2px {MARKER_RING},0 3px 8px {RED}88">{len(orders)}</div>',
+            ), tooltip=f"<b>Not in the plan</b><br>{listing}").add_to(m)
+    return m
+
+
+# =============================================================================
+# 6. THE PAGE
+#    Streamlit runs this whole file top to bottom on every click.
+#    The header switch decides WHO is using the app; the sidebar decides WHAT they see.
+# =============================================================================
+st.set_page_config(page_title="Fleet Control Tower · Prism", page_icon="💠", layout="wide",
+                   initial_sidebar_state="collapsed")
+
+if st.get_option("theme.base") != "light":
+    st.warning("This version has its own light theme. Start it from inside the prism folder: "
+               "`cd prism`, then `py -m streamlit run app_prism.py --server.port 8503`")
+
+# Theme: Light Prism by default. Remembered in the session (survives role and truck changes)
+# and in the page address (?theme=dark), so it also survives a page refresh.
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark" if st.query_params.get("theme") == "dark" else "light"
+
+
+def toggle_theme():
+    st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
+    st.query_params["theme"] = st.session_state.theme
+
+
+apply_theme(st.session_state.theme)
+inject_css()
+
+# Remember the chosen view between clicks. First visit: Dispatcher, everything visible.
+if "role" not in st.session_state:
+    st.session_state.role = "Dispatcher"
+    st.session_state.panels = list(ROLE_PRESETS["Dispatcher"])
+
+
+def use_role_preset():
+    """Picking a role switches the panels to that role's ready-made set."""
+    st.session_state.panels = list(ROLE_PRESETS[st.session_state.role])
+
+
+# ---- Header: brand, role switch, status ------------------------------------------
+with st.container(key="topbar"):
+    head_brand, head_role, head_chips, head_theme = st.columns([5, 3.3, 2.8, 0.45], vertical_alignment="center",
+                                                               gap="small")
+with head_brand:
+    brand_html()
+with head_role:
+    st.segmented_control("View", list(ROLE_PRESETS), key="role", required=True,
+                         on_change=use_role_preset, label_visibility="collapsed")
+with head_theme:
+    going_to = "dark" if st.session_state.theme == "light" else "light"
+    st.button("", key="theme_toggle", on_click=toggle_theme,
+              icon=":material/dark_mode:" if going_to == "dark" else ":material/light_mode:",
+              help=f"Switch to {THEME_NAMES[going_to]}")
+role = st.session_state.role
+is_driver = role == "Driver"
+
+# ---- Sidebar: display settings and data source -------------------------------------
+with st.sidebar:
+    html('<div class="h2">Display</div>')
+    st.caption(f"{role} view. {ROLE_DESCRIPTIONS[role]}")
+    with st.expander("Advanced display settings"):
+        st.pills("Show on screen", PANELS, selection_mode="multi", key="panels",
+                 help="Picking a role in the header gives a ready-made set. Fine-tune it here.")
+    st.divider()
+
+scenarios = list_scenarios()
+if not scenarios:
+    st.error("No data found. The app looks for the data folder next to it or one level up.")
+    st.stop()
+
+# Drivers don't choose company data, so for them it is tucked away (but still there).
+data_box = st.sidebar.expander("Data source") if is_driver else st.sidebar.container()
+with data_box:
+    if not is_driver:
+        html('<div class="h2">Data source</div>')
+    scenario = st.selectbox("Scenario", scenarios, key="scenario")
+    plans = list_plans(scenario)
+    if not plans:
+        st.warning(f"data/{scenario} has no plan file yet (name it plan_something.json).")
+        st.stop()
+    plan_file = st.selectbox("Plan", plans, key="plan_file")
+    st.caption("Lines are schematic connections between cities, not road shapes; "
+               "km come from the distance matrix.")
+
+try:
+    data = load_scenario(scenario)
+    plan = load_plan(scenario, plan_file)
+except Exception as error:                     # show a readable message instead of crashing
+    st.error(f"Couldn't read the data files: {error}")
+    st.stop()
+
+analysis, not_in_plan, problems = analyse_plan(data, plan)
+colours = truck_colours(data)
+show = set(st.session_state.panels)
+show_numbers = "Fleet numbers" in show
+show_map = "Map" in show
+dock_items = [p for p in ("Fleet table", "Truck details", "Stops") if p in show]
+show_dock = bool(dock_items)
+
+with head_chips:
+    chips_html(scenario, plan_file, problems, show_checks=show_numbers)
+
+if not (show_map or show_dock or show_numbers):
+    st.info("Nothing to show yet. Open the sidebar (» at the top left) and choose what to see.")
+    st.stop()
+
+
+# ---- Driver progress: how many stops the driver has confirmed (same as app.py) -------------
+def progress_key(tid):
+    return f"stops_done_{scenario}_{plan_file}_{tid}"    # separate progress per plan and truck
+
+
+def stop_done(key, total):
+    st.session_state[key] = min(st.session_state.get(key, 0) + 1, total)
+
+
+def stop_back(key):
+    st.session_state[key] = max(st.session_state.get(key, 0) - 1, 0)
+
+
+# ---- Containers: the stage (map + floating glass) or a plain page without the map --------
+if show_map:
+    stage = st.container(key="stage")
+    with stage:
+        map_holder = st.container()                  # filled last, once the truck choice is known
+        if show_numbers:
+            with st.container(key="ribbon_slot"):
+                ribbon_html(data, analysis, not_in_plan)
+        dock = st.container(key="dock") if show_dock else st.container(key="picker")
+        legend_slot = st.container(key="legend_slot")
+else:
+    if show_numbers:
+        with st.container(key="ribbon_static"):
+            ribbon_html(data, analysis, not_in_plan)
+    dock = st.container(key="dock_static") if show_dock else None
+
+labels = {tid: f"{tid}  ·  {data['trucks'][tid]['type']}, {data['trucks'][tid]['capacity_kg']:,} kg"
+          for tid in analysis}
+truck_options = sorted(analysis) if is_driver else ["All trucks"] + sorted(analysis)
+selected = None
+
+# ---- The dock: one glass surface; what is inside depends on the role -----------------------
+if dock is not None:
+    with dock:
+        head = st.empty()
+        choice = st.selectbox("Your truck" if is_driver else "Truck", truck_options, key=f"truck_{role}",
+                              format_func=lambda t: labels.get(t, t), label_visibility="collapsed")
+        selected = None if choice == "All trucks" else choice
+        if selected:                                   # the dock's light picks up the truck's colour
+            html(f"<style>.st-key-dock, .st-key-dock_static, .st-key-picker {{ --truck: {colours[selected]}; }}</style>")
+        done_stops = st.session_state.get(progress_key(selected), 0) if (is_driver and selected) else None
+
+        if is_driver:
+            total = len(analysis[selected]["stops"])
+            meta = f"Stop {done_stops + 1} of {total}" if done_stops < total else f"All {total} stops done ✓"
+            head.markdown(f'<div class="dock-head"><div class="h2">Your route</div><div class="cap">{meta}</div></div>',
+                          unsafe_allow_html=True)
+        elif role == "Manager":
+            head.markdown('<div class="dock-head"><div class="h2">Fleet economics</div>'
+                          '<div class="cap">cost and CO₂ per truck</div></div>', unsafe_allow_html=True)
+        else:
+            n_orders = sum(t["orders"] for t in analysis.values())
+            head.markdown(f'<div class="dock-head"><div class="h2">Fleet</div>'
+                          f'<div class="cap">{len(data["trucks"])} trucks · {n_orders} orders planned</div></div>',
+                          unsafe_allow_html=True)
+
+        if show_dock:
+            with st.container(key="dock_scroll"):
+                if problems and show_numbers and not is_driver:
+                    with st.expander(f"⚠️ {len(problems)} rule problem(s), each official violation costs 20 points"):
+                        for p in problems:
+                            st.markdown(f"- {p}")
+
+                if is_driver:
+                    if "Truck details" in show:
+                        identity_html(data, colours, selected)
+                        next_up_html(data, analysis, selected, done_stops)
+                        html(f'<div class="progress"><i style="width:{100 * done_stops / max(total, 1):.0f}%"></i></div>')
+                        back_col, done_col = st.columns([1, 1.5], gap="small")
+                        key = progress_key(selected)
+                        with back_col:
+                            st.button("◀ Back", key=f"back_{selected}", on_click=stop_back, args=(key,),
+                                      disabled=done_stops == 0, width="stretch")
+                        with done_col:
+                            st.button("✓ Stop done", key=f"done_{selected}", on_click=stop_done, args=(key, total),
+                                      disabled=done_stops >= total, type="primary", width="stretch")
+                    if "Stops" in show:
+                        html('<div class="hair"></div>')
+                        timeline_html(data, analysis, colours, selected, done=done_stops)
+                    if "Fleet table" in show:
+                        html('<div class="hair"></div>')
+                        fleet_list_html(data, analysis, colours, role, highlight=selected)
+
+                elif role == "Manager":
+                    # Fleet-wide first; one truck's details only on demand, underneath
+                    if "Fleet table" in show:
+                        fleet_list_html(data, analysis, colours, role, highlight=selected)
+                    if selected and "Truck details" in show:
+                        html('<div class="hair"></div>')
+                        identity_html(data, colours, selected, with_costs=True)
+                        numbers_html(data, analysis, selected)
+                    if selected and "Stops" in show:
+                        html('<div class="hair"></div>')
+                        timeline_html(data, analysis, colours, selected)
+                    if not selected and ("Truck details" in show or "Stops" in show):
+                        html('<div class="cap">Choose a truck above to see its details.</div>')
+
+                else:   # Dispatcher
+                    wants_truck_info = "Truck details" in show or "Stops" in show
+                    if selected is None or not wants_truck_info:
+                        if "Fleet table" in show:
+                            fleet_list_html(data, analysis, colours, role)
+                        if wants_truck_info:
+                            html('<div class="cap">Choose a truck above to see its route, numbers and stops.</div>')
+                    else:
+                        if "Truck details" in show:
+                            identity_html(data, colours, selected)
+                            numbers_html(data, analysis, selected)
+                        if "Stops" in show:
+                            html('<div class="hair"></div>')
+                            timeline_html(data, analysis, colours, selected)
+
+# ---- The map ---------------------------------------------------------------------------
+if show_map:
+    done_stops = st.session_state.get(progress_key(selected), 0) if (is_driver and selected) else None
+    here = None
+    if is_driver and selected:
+        stop_cities = analysis[selected]["stop_cities"]
+        here = data["trucks"][selected]["start_city"] if done_stops == 0 else stop_cities[done_stops - 1]
+    with map_holder:
+        fleet_map = build_map(
+            data, analysis, not_in_plan, selected,
+            show_names="City names" in show, show_unplanned="Orders not in plan" in show,
+            only_selected=is_driver, done_stops=done_stops, here_city=here,
+            pad_top=130 if show_numbers else 50,
+            pad_right=(DOCK_WIDTH + 70) if show_dock else 360)
+        st_folium(fleet_map, height=600, use_container_width=True, returned_objects=[], key="prism_map")
+    with legend_slot:
+        legend_html(show_unplanned="Orders not in plan" in show, show_here=here is not None)
