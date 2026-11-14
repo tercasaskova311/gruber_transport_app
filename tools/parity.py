@@ -13,7 +13,7 @@ import json
 import random
 import sys
 
-from gruber import api, config, loader, simulator
+from simulator import api, config, loader, simulator
 from tools import plangen
 
 PARITY_DIR = config.DATA_DIR / "parity"

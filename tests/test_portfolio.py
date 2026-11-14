@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from gruber import loader, simulator
+from simulator import loader, simulator
 from tools import portfolio
 
 

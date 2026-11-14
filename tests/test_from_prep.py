@@ -25,7 +25,7 @@ pytest.importorskip("duckdb")
 
 
 def _pair(sid):
-    from gruber.loader import list_snapshots  # newest first by timestamp, any naming style
+    from simulator.loader import list_snapshots  # newest first by timestamp, any naming style
     snaps = list_snapshots(sid)
     if not snaps:
         pytest.skip(f"no JSON snapshot for {sid}")

@@ -13,7 +13,7 @@ import ejection  # noqa: E402
 from instance import load_instance  # noqa: E402
 from solver import check_plan, construct  # noqa: E402
 
-from gruber import loader, simulator  # noqa: E402
+from simulator import loader, simulator  # noqa: E402
 
 DIRS = sorted((ROOT / "data" / "fake").glob("fake_*")) + \
     [s for sid in ("scenario_big", "scenario_competitive") for s in loader.list_snapshots(sid)[-1:]]

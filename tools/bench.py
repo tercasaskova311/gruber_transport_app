@@ -29,7 +29,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from gruber import loader, simulator
+from simulator import loader, simulator
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "experiments" / "results.csv"
