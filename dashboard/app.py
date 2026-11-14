@@ -3,7 +3,7 @@
   2. Loading data        scenarios and plans from the team's DuckDB (data/hackathon.duckdb)
   3. Route calculations  identical to app.py
   4. Glass components    header, ribbon, dock sections, stop timeline, legend
-  5. The map             quiet OSM basemap (CARTO), glowing routes
+  5. The map             classic OpenStreetMap basemap, blended routes
   6. The page            role tabs; number strip, map + side panel
 
 Run it from the repo root (the theme is in .streamlit/config.toml there):
@@ -32,7 +32,8 @@ import roads                                    # noqa: E402  real road shapes f
 #    palette, so both themes share exactly the same layout, type and components.
 # =============================================================================
 BRAND_NAME = "Logi-Wise"
-# OpenStreetMap's own classic tiles (no API key needed).
+# OpenStreetMap's own classic tiles (no API key needed). MAP_TINT softens their colours a bit
+# so the coloured routes stand out, like Strava; set it to "none" for the original look.
 MAP_CREDIT = ('&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · '
               'roads: <a href="https://project-osrm.org">OSRM</a>')
 _OSM_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -42,7 +43,8 @@ THEMES = {
     "light": dict(
         TEXT="#272B33", MUTED="#5E6575", FAINT="#8C92A1",
         ACCENT="#22A08C", AQUA="#8FE3C8", MAUVE="#D3AFC6", RED="#E1203B",
-        ROUTE="#2563EB", TRUCK_BG="#1D4ED8", GREEN="#16A34A", STOP_HOLLOW="#FFFFFF",
+        ROUTE="#EA580C", ROUTE_COLD="#0891B2",          # standard = orange, refrigerated = cold cyan
+        TRUCK_BG="#1D4ED8", GREEN="#16A34A", STOP_HOLLOW="#FFFFFF",
         PRISM="conic-gradient(from 200deg, #8FE3C8, #B9DCF4, #CBB9F2, #EDC3DC, #F7E7CB, #8FE3C8)",
         SPECTRAL="linear-gradient(100deg, #1F9E8A 0%, #4F8FDF 48%, #A56BC8 100%)",
         TRUCK_COLOURS=["#2F8FDB", "#8A63E8", "#13A386", "#EE6A4C", "#C64FA8",
@@ -78,7 +80,11 @@ THEMES = {
         # map
         FLOAT_BG="rgba(248,250,252,0.93)",
         MAP_TILES=_OSM_TILES, MAP_BG="#EEF1F2",
-        MAP_TINT="none",                                # classic OpenStreetMap colours
+        MAP_TINT="saturate(0.4) brightness(1.03)",      # OSM, colours toned down
+        ROUTE_INK="#F2620F", ROUTE_BLEND="normal", ROUTE_GLOW=False,     # white edge keeps crossings clean
+        # load on board 0-20 %, ..., 80-100 %: pale peach -> Strava orange (fuller = hotter, not darker)
+        LOAD_RAMP=["#F8C9A4", "#F7A56E", "#F6853F", "#F46A1C", "#E9520A"],
+        TRUCK_ICON="#232733", TRUCK_ICON_EDGE="#FFFFFF",
         MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(255,255,255,0.82)", MAP_CONTROL_LINE="rgba(39,43,51,0.08)",
         TOOLTIP_BG="#FFFFFF",
@@ -90,7 +96,8 @@ THEMES = {
     "dark": dict(
         TEXT="#F2EEF8", MUTED="#B9B0D0", FAINT="#8E85A8",
         ACCENT="#5FD6BE", AQUA="#8FE3C8", MAUVE="#C99BC0", RED="#FF4D6A",
-        ROUTE="#60A5FA", TRUCK_BG="#3B82F6", GREEN="#4ADE80", STOP_HOLLOW="#1B1530",
+        ROUTE="#FF8A3D", ROUTE_COLD="#22D3EE",          # standard = orange, refrigerated = cold cyan
+        TRUCK_BG="#3B82F6", GREEN="#4ADE80", STOP_HOLLOW="#1B1530",
         PRISM="conic-gradient(from 200deg, #7FD9C0, #8FB8F0, #B49BF0, #E0A8CF, #E9D2B8, #7FD9C0)",
         SPECTRAL="linear-gradient(100deg, #6FE3C9 0%, #9DB8FF 50%, #D6A3E8 100%)",
         TRUCK_COLOURS=["#5CB4F5", "#A98BFF", "#3FD3AE", "#FF8C6E", "#E77CCB",
@@ -127,7 +134,11 @@ THEMES = {
         # map
         FLOAT_BG="rgba(38,31,60,0.94)",
         MAP_TILES=_OSM_TILES, MAP_BG="#1E1830",
-        MAP_TINT="brightness(0.72) contrast(1.08) saturate(0.85)",   # classic map, dimmed for dark mode
+        MAP_TINT="brightness(0.6) contrast(1.08) saturate(0.4)",   # OSM, dimmed for dark mode
+        ROUTE_INK="#FF8A3D", ROUTE_BLEND="screen", ROUTE_GLOW=True,      # overlaps glow brighter, like Strava
+        # load on board 0-20 %, ..., 80-100 %: Strava heatmap, dark ember -> hot yellow-white
+        LOAD_RAMP=["#7A2A12", "#B8441A", "#F06A1E", "#FF9A3C", "#FFD27A"],
+        TRUCK_ICON="#F4F1FA", TRUCK_ICON_EDGE="#14111F",
         MAP_SHEEN="none",
         MAP_CONTROL_BG="rgba(52,43,74,0.88)", MAP_CONTROL_LINE="rgba(255,255,255,0.10)",
         TOOLTIP_BG="#2C2442",
@@ -147,10 +158,12 @@ def apply_theme(name):
 apply_theme("light")                                  # Light Prism is the default
 
 
-# Layout: the map is the whole background; header bar, side panel and legend float on it.
-DOCK_WIDTH = 384           # the side panel floating on the right of the map
-TOP_H = 112                # height of the floating header bar plus its margins
-INSET = 16                 # every floating element sits this far from the screen edge
+# Layout like mapy.com: the side panel fills the right edge, with the role tabs across its top;
+# the map gets small floating controls: brand + refresh + theme top-left, zoom top-right,
+# scale + credit bottom-left; the legend is the footer of the side panel.
+DOCK_WIDTH = 400           # the side panel along the right edge
+TABS_H = 56                # height of the role tabs at the top of the side panel
+INSET = 16                 # floating controls sit this far from the edges of the map area
 R_PANEL = 22               # corner radius: panels (number strip, side panel, map)
 R_INNER = 14               # corner radius: anything inside a panel (inputs, rows, buttons)
 
@@ -378,20 +391,30 @@ def inject_css():
 
       /* ---------- Page ---------- */
       [data-testid="stApp"] {{ background: {PAGE_BG}; background-attachment: fixed; color: {TEXT}; }}
-      [data-testid="stHeader"] {{ background: transparent; }}
-      /* Streamlit's invisible top bar lies over our header: let clicks pass through it,
-         except on its own buttons (open sidebar, menu) */
-      [data-testid="stHeader"], [data-testid="stToolbar"] {{ pointer-events: none; }}
-      [data-testid="stHeader"] button, [data-testid="stHeader"] a {{ pointer-events: auto; color: {TEXT} !important; }}
-      [data-testid="stMainMenu"] {{ display: none; }}
+      /* Streamlit's own top bar would lie over our header; the app has no sidebar or menu to open */
+      [data-testid="stHeader"], [data-testid="stDecoration"], [data-testid="stMainMenu"] {{ display: none; }}
       [data-testid="stExpandSidebarButton"], [data-testid="stExpandSidebarButton"] *,
       [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarCollapseButton"] * {{ color: {TEXT} !important; }}   /* developer menu: not needed here, and it crowded the theme toggle */
-      .block-container, [data-testid="stMainBlockContainer"] {{ padding: 12px 22px 14px !important; max-width: none; }}
-      /* Header: one floating glass bar, so it stays readable over the map */
-      .st-key-topbar {{ position: relative; z-index: 6; margin-bottom: 12px; padding: 8px 14px; border-radius: {R_PANEL}px;
-                        background: {GLASS}; backdrop-filter: blur(22px) saturate(170%);
-                        -webkit-backdrop-filter: blur(22px) saturate(170%);
-                        border: 1px solid {GLASS_BORDER}; box-shadow: {EDGE}, {LIFT}; }}
+      .block-container, [data-testid="stMainBlockContainer"] {{ padding: {TABS_H + 28}px 22px 14px !important; max-width: none; }}
+      /* Top-left of the map: brand, refresh, theme as small floating pills (like mapy.com's map buttons) */
+      .st-key-topbar {{ position: fixed !important; top: {INSET}px; left: {INSET}px; z-index: 7;
+                        max-width: calc(100vw - {DOCK_WIDTH + 2 * INSET + 110}px); }}
+      .st-key-topbar [data-testid="stMarkdownContainer"] {{ margin-bottom: 0 !important; }}
+      .pill {{ background: {FLOAT_BG}; border: 1px solid {GLASS_BORDER}; border-radius: 999px;
+               box-shadow: {EDGE}, 0 4px 14px rgba(20,16,40,0.16); }}
+      /* Role tabs: the top strip of the side panel, like mapy.com's Search / Route / My Mapy */
+      .st-key-rolebar {{ position: fixed !important; top: 0; right: 0; width: {DOCK_WIDTH}px; height: {TABS_H}px;
+                         z-index: 7; gap: 0 !important; background: {FLOAT_BG};
+                         border-left: 1px solid {GLASS_BORDER}; border-bottom: 1px solid {HAIR}; }}
+      .st-key-rolebar > div, .st-key-rolebar [data-testid="stButtonGroup"] {{ width: 100% !important; height: 100%; }}
+      .st-key-rolebar [role="radiogroup"] {{ display: flex !important; width: 100%; height: 100%; gap: 0 !important;
+            padding: 0 !important; border: none !important; border-radius: 0 !important;
+            background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; }}
+      .st-key-rolebar button {{ flex: 1 1 0 !important; height: {TABS_H}px !important; border-radius: 0 !important; }}
+      .st-key-rolebar button p {{ font-size: 0.92rem !important; font-weight: 700; }}
+      .st-key-rolebar button:hover {{ background: {HOVER} !important; }}
+      .st-key-rolebar button[aria-checked="true"] {{ background: {ACCENT} !important; color: #FFFFFF !important;
+                                                     box-shadow: none !important; }}
       [data-testid="stSidebar"] {{ background: {SIDEBAR_BG} !important; backdrop-filter: blur(24px) saturate(160%);
                                    border-right: 1px solid {SIDEBAR_BORDER}; }}
       [data-testid="stSidebar"] button, [data-testid="stSidebarCollapseButton"] * {{ color: {TEXT}; }}
@@ -445,16 +468,16 @@ def inject_css():
       .hair {{ height: 1px; background: {HAIR}; box-shadow: 0 1px 0 {HAIR_SHADOW}; }}
 
       /* ---------- Header ---------- */
-      .brand {{ display: flex; align-items: center; gap: 12px; min-width: 0; }}
-      .orb-logo {{ width: 38px; height: 38px; border-radius: 50%; flex: none;
+      .brand {{ display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 18px 6px 7px; }}
+      .orb-logo {{ width: 32px; height: 32px; border-radius: 50%; flex: none;
                    background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.95) 0 16%, rgba(255,255,255,0) 42%), {PRISM};
                    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), inset 0 -6px 12px rgba(120,100,180,0.25),
                                0 8px 20px {LOGO_GLOW}; }}
-      .brand-title {{ font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: {TEXT};
+      .brand-title {{ font-size: 1.3rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: {TEXT};
                       white-space: nowrap; }}
       .brand-title span {{ background: {SPECTRAL}; -webkit-background-clip: text; background-clip: text; color: transparent;
                            padding-right: 2px; }}
-      .brand .ov {{ margin-top: 6px; letter-spacing: 0.16em; }}
+      .brand .ov {{ margin-top: 4px; letter-spacing: 0.14em; font-size: 0.6rem; }}
       .chips {{ display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }}
       .chip {{ display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px;
                font-size: 0.78rem; font-weight: 600; color: {TEXT}; white-space: nowrap; }}
@@ -476,7 +499,7 @@ def inject_css():
 
       /* Theme toggle: one round glass button with a sun or moon */
       .st-key-theme_toggle {{ display: flex; justify-content: flex-end; }}
-      .st-key-theme_toggle button {{ width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50% !important;
+      .st-key-theme_toggle button {{ width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 50% !important;
                                      color: {TEXT} !important; transition: transform .15s ease; }}
       .st-key-theme_toggle button:hover {{ transform: scale(1.05); }}
       .st-key-theme_toggle button:active {{ transform: scale(0.96); }}
@@ -486,12 +509,11 @@ def inject_css():
       .st-key-mapbox {{ position: fixed !important; inset: 0; z-index: 0; gap: 0 !important; }}
       .st-key-mapbox iframe, iframe[title="streamlit_folium.st_folium"] {{
           position: fixed; inset: 0; width: 100vw !important; height: 100vh !important; display: block; border: 0; }}
-      .st-key-legend_slot {{ position: fixed !important; left: {INSET}px; bottom: {INSET}px; z-index: 6;
-                             max-width: calc(100vw - {DOCK_WIDTH + 3 * INSET}px); }}
+      /* Legend: the footer of the side panel */
+      .st-key-legend_slot {{ flex: none; padding: 10px 2px 12px; border-top: 1px solid {HAIR}; }}
       .st-key-ribbon_slot, .st-key-ribbon_static {{ margin-bottom: 4px; }}
       /* Over the map the panels are nearly solid: Safari can't blur an iframe behind glass */
-      .st-key-dock, .st-key-legend_slot .legend,
-      body:has(.st-key-mapbox) .st-key-topbar {{ background: {FLOAT_BG} !important; }}
+      .st-key-dock {{ background: {FLOAT_BG} !important; }}
 
       /* ---------- Number strip: label / value / caption on three shared lines ---------- */
       .ribbon {{ width: 100%; display: flex; flex-wrap: wrap; row-gap: 12px; padding: 14px 6px;
@@ -503,9 +525,11 @@ def inject_css():
                         background: {SPECTRAL}; -webkit-background-clip: text; background-clip: text; color: transparent; }}
 
       /* ---------- Dock: one glass surface, sections divided by space and hairlines ---------- */
-      .st-key-dock {{ position: fixed !important; top: {TOP_H}px; right: {INSET}px; bottom: {INSET}px;
-                      width: {DOCK_WIDTH}px; z-index: 6; border-radius: {R_PANEL}px;
+      .st-key-dock {{ position: fixed !important; top: {TABS_H}px; right: 0; bottom: 0;
+                      width: {DOCK_WIDTH}px; z-index: 6; border-radius: 0; border: none !important;
+                      border-left: 1px solid {GLASS_BORDER} !important; box-shadow: -2px 0 14px rgba(20,16,40,0.10) !important;
                       padding: 18px 18px 6px; gap: 12px; overflow: hidden; }}
+      .st-key-dock::after {{ display: none; }}   /* no prismatic rim on a panel attached to the edge */
       .st-key-picker {{ border-radius: {R_PANEL}px; padding: 16px 18px; gap: 10px; }}
       .st-key-dock_static {{ max-width: 760px; margin: 0 auto; border-radius: {R_PANEL}px; padding: 18px; gap: 12px; }}
       .st-key-dock > div:has(.st-key-dock_scroll) {{ flex: 1 1 auto; min-height: 0; }}
@@ -605,8 +629,13 @@ def inject_css():
       .st-key-dock_scroll button p {{ font-size: 0.84rem; font-weight: 700; }}
 
       /* ---------- Legend ---------- */
-      .legend {{ width: fit-content; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px;
-                 padding: 8px 16px; border-radius: 999px; }}
+      .legend {{ display: flex; flex-wrap: wrap; align-items: center; gap: 7px 16px; }}
+      .legend .load-key b {{ font-weight: 600; }}
+      .legend .load-key em {{ display: inline-flex; height: 8px; border-radius: 999px; overflow: hidden; }}
+      .legend .load-key em i {{ width: 16px; height: 8px; }}
+      .st-key-route_colour [data-testid="stButtonGroup"] {{ justify-content: flex-start; }}
+      .st-key-route_colour button {{ padding: 2px 10px !important; min-height: 0 !important; }}
+      .st-key-route_colour button p {{ font-size: 0.74rem !important; }}
       .idle {{ padding: 9px 10px; }}
       .unserved .row {{ grid-template-columns: minmax(0, 1fr) auto; }}
       .legend span {{ display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 0.74rem;
@@ -620,19 +649,38 @@ def html(markup):
     st.markdown(markup, unsafe_allow_html=True)
 
 
-def truck_colours(data):
-    """Every truck uses the one route colour, so the panel matches the map."""
-    return {tid: ROUTE for tid in data["trucks"]}
+def route_colour(truck):
+    """Routes are coloured by truck type: standard = blue, refrigerated = violet.
+    22 colours (one per truck) can't be told apart; the type is what a dispatcher needs."""
+    return ROUTE_COLD if truck["type"] == "refrigerated" else ROUTE
 
 
-def truck_svg(size=22):
-    """A plain truck (side view, cab on the right) in the truck blue, with a thin white outline
-    so it stays visible on any part of the map. No frame around it."""
+LOAD_WEIGHT = [1.4, 1.8, 2.2, 2.6, 3.0]           # fleet view: fuller legs are also drawn a bit thicker
+
+
+def load_colour(load_kg, capacity_kg):
+    """Colour of a leg from how full the truck is (5 steps of LOAD_RAMP, a heat scale).
+    Lines are slightly transparent and blended, so busy corridors stand out too."""
+    step = min(len(LOAD_RAMP) - 1, int(5 * load_kg / capacity_kg)) if capacity_kg else 0
+    return LOAD_RAMP[step]
+
+
+def truck_colours(data, colour_by="Load"):
+    """The panel uses the same colour as the truck's route on the map
+    (with the load heatmap a route has many colours, so the panel keeps plain blue)."""
+    return {tid: route_colour(truck) if colour_by == "Truck type" else ROUTE_INK
+            for tid, truck in data["trucks"].items()}
+
+
+def truck_svg(size=22, fill=None):
+    """A plain truck (side view, cab on the right). Neutral ink by default (charcoal in light mode,
+    white in dark mode) so it never competes with the coloured routes; thin contrasting outline."""
+    fill = fill or TRUCK_ICON
     return (f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" style="overflow:visible">'
-            f'<g fill="{TRUCK_BG}" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" paint-order="stroke">'
+            f'<g fill="{fill}" stroke="{TRUCK_ICON_EDGE}" stroke-width="1.4" stroke-linejoin="round" paint-order="stroke">'
             f'<path d="M1.5 5.5h12.5v10.5H1.5z"/><path d="M14 8.5h4.6l3.9 4.1V16H14z"/>'
             f'<circle cx="6" cy="17.6" r="2.3"/><circle cx="18" cy="17.6" r="2.3"/></g>'
-            f'<path d="M15.6 10h2.5l2.2 2.4h-4.7z" fill="#fff" opacity="0.85"/></svg>')
+            f'<path d="M15.6 10h2.5l2.2 2.4h-4.7z" fill="{TRUCK_ICON_EDGE}" opacity="0.85"/></svg>')
 
 
 def compact(n):
@@ -647,7 +695,7 @@ def meter(value, maximum):
 
 
 def brand_html():
-    html(f'<div class="brand"><div class="orb-logo"></div><div style="min-width:0">'
+    html(f'<div class="brand pill"><div class="orb-logo"></div><div style="min-width:0">'
          f'<div class="brand-title">Logi<span>-Wise</span></div>'
          f'<div class="ov">Truck planning &nbsp;·&nbsp; Gruber Logistics Hackathon 2026</div></div></div>')
 
@@ -845,21 +893,30 @@ def next_up_html(data, analysis, tid, done):
          + "</div>")
 
 
-def legend_html(show_unplanned=True, show_here=False):
-    solid = f'<svg width="28" height="8"><line x1="1" y1="4" x2="27" y2="4" stroke="{ROUTE}" stroke-width="4" stroke-linecap="round"/></svg>'
-    dashed = f'<svg width="28" height="8"><line x1="1" y1="4" x2="27" y2="4" stroke="{ROUTE}" stroke-width="4" stroke-dasharray="6 5"/></svg>'
+def legend_html(show_unplanned=True, show_here=False, colour_by="Load"):
+    line = lambda colour, dash="": (f'<svg width="28" height="8"><line x1="1" y1="4" x2="27" y2="4" stroke="{colour}" '
+                                    f'stroke-width="4" stroke-linecap="round" {dash}/></svg>')
+    standard, cold = line(ROUTE), line(ROUTE_COLD)
+    solid, dashed = line(MUTED), line(MUTED, 'stroke-dasharray="4 5" stroke-linecap="butt"')
     todo = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5.5" fill="{STOP_HOLLOW}" stroke="{GREEN}" stroke-width="3"/></svg>'
     done = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5.5" fill="{GREEN}" stroke="{GREEN}" stroke-width="3"/></svg>'
     red = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5.5" fill="{RED}" stroke="#fff" stroke-width="2"/></svg>'
     truck = truck_svg(20)
-    html(f'<div class="legend lg"><span>{truck} Truck</span><span>{solid} With cargo</span><span>{dashed} Empty</span>'
+    if colour_by == "Load":
+        bar = "".join(f'<i style="background:{c};opacity:1"></i>' for c in LOAD_RAMP)
+        routes = (f'<span class="load-key">Load on board <b>0 %</b><em>{bar}</em><b>100 %</b></span>'
+                  f'<span>{dashed} Empty</span>')
+    else:
+        routes = (f'<span>{standard} Standard</span><span>{cold} Refrigerated</span>'
+                  f'<span>{solid} With cargo</span><span>{dashed} Empty</span>')
+    html(f'<div class="legend"><span>{truck} Truck</span>{routes}'
          f'<span>{todo} Stop to do</span>' + (f'<span>{done} Stop done</span>' if show_here else "")
          + (f'<span>{red} Unserved order</span>' if show_unplanned else "") + "</div>")
 
 
 # =============================================================================
 # 5. THE MAP
-#    Classic OpenStreetMap; one route colour; trucks = blue squares, stops = green dots,
+#    OpenStreetMap (toned down); routes on a heat scale by load; trucks = neutral icons, stops = green dots,
 #    unserved orders = red dots.
 # =============================================================================
 def map_css():
@@ -869,21 +926,26 @@ def map_css():
   .folium-map, .leaflet-container {{ height: 100vh !important; background: {MAP_BG} !important;
                                      font-family: Manrope, sans-serif; }}
   .leaflet-tile-pane img.leaflet-tile {{ filter: {MAP_TINT}; }}
+  .leaflet-overlay-pane path.route {{ mix-blend-mode: {ROUTE_BLEND}; }}
   .leaflet-container::after {{ content: ""; position: absolute; inset: 0; z-index: 350; pointer-events: none;
                                background: {MAP_SHEEN}; }}
-  .leaflet-top.leaflet-left {{ top: auto; left: auto; bottom: 34px; right: {DOCK_WIDTH + 2 * INSET}px; }}
+  /* mapy.com layout: zoom top-right of the map area as one "− +" pill, scale + credit bottom-left */
+  .leaflet-top.leaflet-left {{ top: {INSET}px; left: auto; right: {DOCK_WIDTH + INSET}px; }}
   .leaflet-top.leaflet-left .leaflet-control {{ margin: 0; }}
-  .leaflet-bottom.leaflet-left {{ bottom: 62px; left: {INSET}px; }}
+  .leaflet-control-zoom {{ display: flex; flex-direction: row-reverse; }}
+  .leaflet-control-zoom a {{ border-bottom: none !important; border-left: 1px solid {MAP_CONTROL_LINE} !important; }}
+  .leaflet-control-zoom a:last-child {{ border-left: none !important; }}
+  .leaflet-bottom.leaflet-left {{ left: {INSET}px; bottom: 24px; }}
   .leaflet-control-scale {{ margin: 0 !important; }}
   .leaflet-control-scale-line {{ background: {MAP_CONTROL_BG}; border-color: {MUTED}; color: {TEXT};
                                  font: 600 11px Manrope, sans-serif; }}
   .leaflet-control-scale-line:not(:first-child) {{ display: none; }}   /* km only, no miles */
   .leaflet-interactive:focus, .leaflet-marker-icon:focus, path:focus, .leaflet-container:focus {{ outline: none !important; }}
-  .leaflet-bottom.leaflet-right {{ right: {DOCK_WIDTH + 2 * INSET}px; }}   /* credit stays visible next to the side panel */
-  .leaflet-bar {{ border: none !important; border-radius: 14px !important; overflow: hidden;
+  .leaflet-bottom.leaflet-right {{ right: auto; left: {INSET}px; }}
+  .leaflet-bar {{ border: none !important; border-radius: 999px !important; overflow: hidden;
                   box-shadow: {EDGE}, 0 6px 18px rgba(20,16,40,0.22) !important; }}
   .leaflet-bar a {{ background: {MAP_CONTROL_BG} !important; color: {TEXT} !important;
-                    width: 34px !important; height: 34px !important; line-height: 34px !important;
+                    width: 40px !important; height: 36px !important; line-height: 36px !important;
                     border-bottom: 1px solid {MAP_CONTROL_LINE} !important; }}
   .leaflet-control-attribution {{ background: {MAP_CONTROL_BG} !important; border-radius: 8px;
                                   font-size: 10px; color: {MUTED}; margin: 0 0 6px 0 !important; }}
@@ -916,7 +978,7 @@ def curve_points(a, b, bend, steps=24):
 
 
 def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
-              only_selected=False, done_stops=None, here_city=None, unserved_lines=False):
+              only_selected=False, done_stops=None, here_city=None, unserved_lines=False, colour_by="Load"):
     cities = data["cities"]
     point = lambda cid: [cities[cid]["latitude"], cities[cid]["longitude"]]
 
@@ -938,9 +1000,9 @@ def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
                      # (OSM shows motorways only from zoom ~7; all of Europe needs zoom ~5)
         lats = [cities[c]["latitude"] for c in route]
         lons = [cities[c]["longitude"] for c in route]
-    # Keep the routes clear of the floating header (top), side panel (right) and legend (bottom)
+    # Keep the routes clear of the floating buttons (top), side panel (right) and scale (bottom)
     m.fit_bounds([[min(lats), min(lons)], [max(lats), max(lons)]],
-                 padding_top_left=(70, TOP_H + 30), padding_bottom_right=(DOCK_WIDTH + 2 * INSET + 30, 80))
+                 padding_top_left=(40, 90), padding_bottom_right=(DOCK_WIDTH + 40, 60))
 
     def leg_points(leg, detail=False):
         """The real road (data/road_shapes_detail.json), otherwise a gentle curve.
@@ -960,29 +1022,51 @@ def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
         legs = analysis[tid]["legs"]
         is_selected = tid == selected
         truck = data["trucks"][tid]
+        colour = route_colour(truck)
         tip = f"{tid} · {truck['type']} · {analysis[tid]['orders']} orders · {analysis[tid]['km']:,} km"
-        groups = {}                                    # (loaded, finished) -> list of leg shapes
+        groups = {}                                    # (colour, strength, loaded, finished) -> leg shapes
         for leg in legs:
             finished = done_stops is not None and is_selected and leg["stop"] <= done_stops
-            groups.setdefault((leg["load_kg"] > 0, finished), []).append(leg_points(leg, is_selected))
-        for (loaded, finished), shapes in groups.items():
-            dash = None if loaded else "7 7"
-            if selected is None:                       # all trucks
-                folium.PolyLine(shapes, color=ROUTE, weight=3, opacity=0.45, dash_array=dash, tooltip=tip, smooth_factor=1.5).add_to(m)
+            loaded = leg["load_kg"] > 0
+            if not loaded:                             # empty legs: thin grey dashes in both modes
+                key = (MUTED, 0.5, False)
+            elif colour_by == "Load":                  # heat scale: yellow = light load, red = full
+                key = (load_colour(leg["load_kg"], truck["capacity_kg"]), 0.95, True)
+            else:
+                key = (colour, 0.9, True)
+            groups.setdefault(key + (finished,), []).append(leg_points(leg, is_selected))
+
+        def line(shapes, **style):
+            path = folium.PolyLine(shapes, smooth_factor=1.5, **style)
+            path.options["className"] = "route"        # blended in CSS: overlaps darken / glow
+            return path.add_to(m)
+
+        for (colour_, alpha, loaded, finished), shapes in groups.items():
+            dash = None if loaded else "4 6"
+            if selected is None:                       # all trucks: thin lines with an edge, like Strava
+                width = LOAD_WEIGHT[LOAD_RAMP.index(colour_)] if colour_ in LOAD_RAMP else 2.2
+                if loaded:                             # thin edge in the map's background colour
+                    folium.PolyLine(shapes, color=CASING, weight=width + 2, opacity=CASING_OPACITY * 0.8,
+                                    smooth_factor=1.5).add_to(m)
+                if ROUTE_GLOW and loaded:
+                    line(shapes, color=colour_, weight=width + 5, opacity=alpha * 0.22)
+                line(shapes, color=colour_, weight=width if loaded else 1.5, opacity=alpha,
+                     dash_array=dash, tooltip=tip)
             elif not is_selected:                      # someone else's route: barely there
-                folium.PolyLine(shapes, color=ROUTE, weight=2, opacity=0.12, dash_array=dash, tooltip=tip, smooth_factor=1.5).add_to(m)
+                line(shapes, color=colour_, weight=1.5, opacity=0.10, dash_array=dash, tooltip=tip)
             elif finished:                             # driver: already driven
                 folium.PolyLine(shapes, color=MUTED, weight=4, opacity=0.5, dash_array=dash, smooth_factor=1.5).add_to(m)
-            else:
+            else:                                      # the selected truck: strong, with an edge
                 folium.PolyLine(shapes, color=CASING, weight=9, opacity=CASING_OPACITY, smooth_factor=1.5).add_to(m)
-                folium.PolyLine(shapes, color=ROUTE, weight=5, opacity=1, dash_array=dash, tooltip=tip, smooth_factor=1.5).add_to(m)
+                folium.PolyLine(shapes, color=colour_, weight=5, opacity=max(alpha, 0.45) if loaded else 0.8,
+                                dash_array=dash, tooltip=tip, smooth_factor=1.5).add_to(m)
         if is_selected:                                # direction arrows, one per leg still to drive
             for leg in legs:
                 if done_stops is not None and leg["stop"] <= done_stops:
                     continue
                 arrow = folium.PolyLine(leg_points(leg, True), opacity=0, weight=1).add_to(m)
                 PolyLineTextPath(arrow, "►", center=True, offset=5,
-                                 attributes={"fill": ROUTE, "font-size": "15"}).add_to(m)
+                                 attributes={"fill": TRUCK_ICON if colour_by == "Load" else colour, "font-size": "15"}).add_to(m)
 
     # ---- Green dots: stops of the orders trucks take. Hollow = still to do, filled = done -------
     stops_at = {}                                      # city -> [(text, done)]
@@ -996,7 +1080,8 @@ def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
     for cid, items in stops_at.items():
         all_done = all(d for _, d in items)
         folium.CircleMarker(
-            point(cid), radius=5 + min(len(items), 8) * 0.5, color=GREEN, weight=3,
+            point(cid), radius=(5 + min(len(items), 8) * 0.5) if selected else (2.5 + min(len(items), 8) * 0.3),
+            color=GREEN, weight=3 if selected else 2,
             fill=True, fill_color=GREEN if all_done else STOP_HOLLOW, fill_opacity=1,
             tooltip=f"<b>{cities[cid]['name']}</b><br>" + "<br>".join(t for t, _ in items[:12])
                     + (f"<br>+{len(items) - 12} more" if len(items) > 12 else ""),
@@ -1018,7 +1103,7 @@ def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
             listing = "<br>".join(f"{o['id']}: → {cities[o['delivery_city']]['name']}, {o['weight_kg']:,} kg"
                                   f"{', needs ' + o['required_truck_type'] if o.get('required_truck_type') else ''}"
                                   for o in orders)
-            size = 11 + min(len(orders), 4) * 1.5
+            size = (11 + min(len(orders), 4) * 1.5) if selected else (7 + min(len(orders), 4))
             folium.Marker(point(cid), icon=folium.DivIcon(
                 icon_size=(size, size), icon_anchor=(-3, size + 3),
                 html=f'<div style="width:{size}px;height:{size}px;border-radius:50%;background:{RED};'
@@ -1044,14 +1129,17 @@ def build_map(data, analysis, not_in_plan, selected, show_unplanned=True,
         at_city.setdefault(where, []).append(tid)
     for where, tids in at_city.items():
         text = selected if selected in tids else (f"×{len(tids)}" if len(tids) > 1 else "")
-        label = (f'<span style="position:absolute;left:30px;top:6px;font:800 12px Manrope,sans-serif;'
-                 f'color:{TRUCK_BG};white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 5px #fff">{text}</span>'
+        label = (f'<span style="position:absolute;left:{30 if selected else 22}px;top:{6 if selected else 2}px;font:800 12px Manrope,sans-serif;'
+                 f'color:{TRUCK_ICON};white-space:nowrap;text-shadow:0 0 3px {LABEL_HALO},0 0 3px {LABEL_HALO},0 0 5px {LABEL_HALO}">{text}</span>'
                  if text else "")
         state = "now here" if where == here_city else "start here"
+        types = {data["trucks"][t]["type"] for t in tids}   # "Truck type" view: icon takes the route colour
+        icon_fill = route_colour(data["trucks"][tids[0]]) if colour_by == "Truck type" and len(types) == 1 else None
+        px = 28 if selected else 20                    # fleet view: small icons, the routes are the picture
         folium.Marker(point(where), icon=folium.DivIcon(
-            icon_size=(28, 28), icon_anchor=(14, 30),  # bottom-centre of the icon just above the city dot
-            html=f'<div style="position:relative;width:28px;height:28px;'
-                 f'filter:drop-shadow(0 2px 2px rgba(0,0,0,0.3))">{truck_svg(28)}{label}</div>',
+            icon_size=(px, px), icon_anchor=(px // 2, px + 2),  # bottom-centre of the icon just above the city dot
+            html=f'<div style="position:relative;width:{px}px;height:{px}px;'
+                 f'filter:drop-shadow(0 2px 2px rgba(0,0,0,0.3))">{truck_svg(px, icon_fill)}{label}</div>',
         ), tooltip=f"<b>{cities[where]['name']}</b> · {state}<br>"
                    + "<br>".join(f"{t} · {data['trucks'][t]['type']}" for t in tids),
             z_index_offset=1000,                        # always above city names and dots
@@ -1085,8 +1173,8 @@ apply_theme(st.session_state.theme)
 inject_css()
 html(f"""<style>
   /* the data menu in the header looks like a status chip */
-  .st-key-data_menu button {{ border-radius: 999px; background: {INPUT_BG};
-        border: 1px solid {INPUT_BORDER}; box-shadow: {INPUT_SHADOW}; padding: 6px 14px; min-height: 0; }}
+  .st-key-data_menu button {{ border-radius: 999px; background: {FLOAT_BG};
+        border: 1px solid {GLASS_BORDER}; box-shadow: {EDGE}, 0 4px 14px rgba(20,16,40,0.16); padding: 8px 16px; min-height: 0; }}
   .st-key-data_menu button p {{ font-size: 0.8rem; font-weight: 600; color: {TEXT}; }}
   .st-key-data_menu {{ display: flex; justify-content: flex-end; }}
 </style>""")
@@ -1117,23 +1205,22 @@ def refresh():
         st.session_state.refresh_note = f"Updated (roads not fetched: {error.__class__.__name__})"
     st.session_state.refreshed_at = pd.Timestamp.now().strftime("%H:%M")
 
-# ---- Header: brand · role tabs · data menu · status · theme --------------------------------
-with st.container(key="topbar"):
-    head_brand, head_role, head_data, head_chips, head_theme = st.columns(
-        [4, 3.2, 1.9, 1.5, 0.45], vertical_alignment="center", gap="small")
-with head_brand:
+# ---- Role tabs: across the top of the side panel (like mapy.com's Search / Route tabs) ------
+with st.container(key="rolebar"):
+    st.segmented_control("View", list(ROLE_PRESETS), key="role", required=True,
+                         label_visibility="collapsed", width="stretch")
+
+# ---- Top-left of the map: brand · refresh · status · theme, as floating pills ---------------
+with st.container(key="topbar", horizontal=True, vertical_alignment="center", gap="small", width="content"):
     brand_html()
-with head_role:
-    st.segmented_control("View", list(ROLE_PRESETS), key="role", required=True, label_visibility="collapsed")
-with head_data:
-    with st.container(key="data_menu"):
+    with st.container(key="data_menu", width="content"):
         plans = list_plans(scenario)                   # best valid plan first
         plan_file = plans[0]
         when = st.session_state.get("refreshed_at")
         st.button(f"Refresh · {when}" if when else "Refresh", icon=":material/refresh:", on_click=refresh,
                   help=f"Reload the newest data and solver results for {scenario}. "
                        f"Showing the best plan: {plan_file}. " + st.session_state.get("refresh_note", ""))
-with head_theme:
+    head_chips = st.container(width="content")
     going_to = "dark" if st.session_state.theme == "light" else "light"
     st.button("", key="theme_toggle", on_click=toggle_theme,
               icon=":material/dark_mode:" if going_to == "dark" else ":material/light_mode:",
@@ -1150,7 +1237,8 @@ except Exception as error:                     # show a readable message instead
     st.stop()
 
 analysis, not_in_plan, problems = analyse_plan(data, plan)
-colours = truck_colours(data)
+colour_by = st.session_state.get("route_colour", "Load")      # toggle in the legend footer
+colours = truck_colours(data, colour_by)
 show = set(ROLE_PRESETS[role])
 show_numbers = "Fleet numbers" in show
 show_map = "Map" in show
@@ -1179,10 +1267,9 @@ if show_map:
     # The page itself lets clicks through to the map; only the floating panels catch them.
     html("""<style>
       [data-testid="stMain"] { pointer-events: none; }
-      .st-key-topbar, .st-key-dock, .st-key-legend_slot, .st-key-mapbox { pointer-events: auto; }
+      .st-key-topbar, .st-key-rolebar, .st-key-dock, .st-key-mapbox { pointer-events: auto; }
     </style>""")
     map_holder = st.container(key="mapbox")          # filled last, once the truck choice is known
-    legend_slot = st.container(key="legend_slot")
     dock = st.container(key="dock")
 else:
     if show_numbers:
@@ -1268,6 +1355,8 @@ with dock:
                 numbers_html(data, analysis, selected)
                 html('<div class="hair"></div>')
                 timeline_html(data, analysis, colours, selected)
+    if show_map:
+        legend_slot = st.container(key="legend_slot")   # panel footer, filled once the map is drawn
 
 # ---- The map ---------------------------------------------------------------------------
 if show_map:
@@ -1281,7 +1370,10 @@ if show_map:
                               show_unplanned="Orders not in plan" in show,
                               only_selected=is_driver, done_stops=done_stops, here_city=here,
                               unserved_lines=(role == "Dispatcher" and selected is None
-                                              and str(st.session_state.get("dock_tab", "")).startswith("Unserved")))
+                                              and str(st.session_state.get("dock_tab", "")).startswith("Unserved")),
+                              colour_by=colour_by)
         st_folium(fleet_map, height=800, use_container_width=True, returned_objects=[], key="prism_map")
     with legend_slot:
-        legend_html(show_unplanned="Orders not in plan" in show, show_here=here is not None)
+        st.segmented_control("Colour routes by", ["Load", "Truck type"], key="route_colour", default="Load",
+                             required=True)
+        legend_html(show_unplanned="Orders not in plan" in show, show_here=here is not None, colour_by=colour_by)
