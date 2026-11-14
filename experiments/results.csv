@@ -222,3 +222,31 @@ when,branch,sha,dirty,config,set,scenario,snapshot,seed,time,score,fulfillment,c
 2026-11-14 04:38,best,8dea097,no,default,fake,fake_comp_b,,1,60.0,904.4918,81.334,100.0,98.5479,100.0,172,200,205.775,253.0,28,0,278,83.4,904.4918,best after tw-first merge (default unchanged)
 2026-11-14 04:38,best,8dea097,no,default,fake,fake_comp_b,,2,60.0,904.2076,81.2352,100.0,98.6878,100.0,172,200,205.525,253.0,28,0,302,80.3,904.2076,best after tw-first merge (default unchanged)
 2026-11-14 04:38,best,8dea097,no,default,fake,fake_comp_b,,3,60.0,906.5367,81.8775,100.0,98.0996,100.0,173,200,207.15,253.0,27,0,380,75.4,906.5367,best after tw-first merge (default unchanged)
+2026-11-14 05:05,algo/portfolio,ba54058,,default,portfolio,small,20261113_192945,1,60.0,1000.0,100.0,100.0,100.0,100.0,20,20,20.0,20.0,0,0,19676,60.8,1000.0,portfolio4 x4 on 4 cores
+2026-11-14 05:05,algo/portfolio,ba54058,,tw-first,portfolio,small,20261113_192945,1,60.0,1000.0,100.0,100.0,100.0,100.0,20,20,20.0,20.0,0,0,13918,48.8,1000.0,portfolio4 x4 on 4 cores
+2026-11-14 05:05,algo/portfolio,ba54058,,default,portfolio,small,20261113_192945,2,60.0,1000.0,100.0,100.0,100.0,100.0,20,20,20.0,20.0,0,0,19410,60.7,1000.0,portfolio4 x4 on 4 cores
+2026-11-14 05:05,algo/portfolio,ba54058,,tw-first,portfolio,small,20261113_192945,2,60.0,1000.0,100.0,100.0,100.0,100.0,20,20,20.0,20.0,0,0,13673,48.8,1000.0,portfolio4 x4 on 4 cores
+2026-11-14 05:06,algo/portfolio,ba54058,,default,portfolio,middle,20261113_192945,1,60.0,997.0649,100.0,100.0,98.0433,100.0,50,50,59.0,59.0,0,0,3774,61.1,997.0649,portfolio4 x4 on 4 cores
+2026-11-14 05:06,algo/portfolio,ba54058,,tw-first,portfolio,middle,20261113_192945,1,60.0,996.4575,100.0,100.0,97.6383,100.0,50,50,59.0,59.0,0,0,3706,61.3,996.4575,portfolio4 x4 on 4 cores
+2026-11-14 05:06,algo/portfolio,ba54058,,default,portfolio,middle,20261113_192945,2,60.0,996.9953,100.0,100.0,97.9969,100.0,50,50,59.0,59.0,0,0,3850,61.1,996.9953,portfolio4 x4 on 4 cores
+2026-11-14 05:06,algo/portfolio,ba54058,,tw-first,portfolio,middle,20261113_192945,2,60.0,996.3334,100.0,100.0,97.5556,100.0,50,50,59.0,59.0,0,0,3574,61.3,996.3334,portfolio4 x4 on 4 cores
+2026-11-14 05:07,algo/portfolio,ba54058,,default,portfolio,big,20261113_192945,1,60.0,969.8446,94.4828,100.0,98.2872,100.0,115,120,137.0,145.0,5,0,492,68.2,969.8446,portfolio4 x4 on 4 cores
+2026-11-14 05:07,algo/portfolio,ba54058,,tw-first,portfolio,big,20261113_192945,1,60.0,971.5718,94.4828,100.0,99.4387,100.0,115,120,137.0,145.0,5,0,432,70.4,971.5718,portfolio4 x4 on 4 cores
+2026-11-14 05:07,algo/portfolio,ba54058,,default,portfolio,big,20261113_192945,2,60.0,969.8972,94.4828,100.0,98.3222,100.0,115,120,137.0,145.0,5,0,428,68.3,969.8972,portfolio4 x4 on 4 cores
+2026-11-14 05:07,algo/portfolio,ba54058,,tw-first,portfolio,big,20261113_192945,2,60.0,969.8575,94.4828,100.0,98.2958,100.0,115,120,137.0,145.0,5,0,492,70.5,969.8575,portfolio4 x4 on 4 cores
+2026-11-14 05:08,algo/portfolio,ba54058,,default,portfolio,competitive,20261113_192945,1,60.0,924.8309,85.2525,100.0,99.0457,100.0,177,200,215.2625,252.5,23,0,336,86.9,924.8309,portfolio4 x4 on 4 cores
+2026-11-14 05:08,algo/portfolio,ba54058,,tw-first,portfolio,competitive,20261113_192945,1,60.0,928.88,86.0149,100.0,99.2038,100.0,178,200,217.1875,252.5,22,0,364,94.5,928.88,portfolio4 x4 on 4 cores
+2026-11-14 05:08,algo/portfolio,ba54058,,default,portfolio,competitive,20261113_192945,2,60.0,925.1628,85.297,100.0,99.1185,100.0,177,200,215.375,252.5,23,0,209,86.7,925.1628,portfolio4 x4 on 4 cores
+2026-11-14 05:08,algo/portfolio,ba54058,,tw-first,portfolio,competitive,20261113_192945,2,60.0,931.6877,86.6089,100.0,99.0955,100.0,179,200,218.6875,252.5,21,0,391,94.4,931.6877,portfolio4 x4 on 4 cores
+2026-11-14 05:10,algo/portfolio,ba54058,,default,portfolio,fake_big_a,fake_big_a,1,60.0,926.9133,85.3827,100.0,100.0,100.0,107,120,125.5125,147.0,13,0,240,72.3,926.9133,portfolio4 x4 on 4 cores
+2026-11-14 05:10,algo/portfolio,ba54058,,tw-first,portfolio,fake_big_a,fake_big_a,1,60.0,926.4841,85.3827,100.0,99.7139,100.0,107,120,125.5125,147.0,13,0,179,75.5,926.4841,portfolio4 x4 on 4 cores
+2026-11-14 05:10,algo/portfolio,ba54058,,default,portfolio,fake_big_a,fake_big_a,2,60.0,926.9133,85.3827,100.0,100.0,100.0,107,120,125.5125,147.0,13,0,211,72.3,926.9133,portfolio4 x4 on 4 cores
+2026-11-14 05:10,algo/portfolio,ba54058,,tw-first,portfolio,fake_big_a,fake_big_a,2,60.0,926.5038,85.3827,100.0,99.727,100.0,107,120,125.5125,147.0,13,0,201,75.4,926.5038,portfolio4 x4 on 4 cores
+2026-11-14 05:11,algo/portfolio,ba54058,,default,portfolio,fake_comp_a,fake_comp_a,1,60.0,895.5868,79.3914,100.0,99.0865,100.0,168,200,201.6542,254.0,32,0,140,91.4,895.5868,portfolio4 x4 on 4 cores
+2026-11-14 05:11,algo/portfolio,ba54058,,tw-first,portfolio,fake_comp_a,fake_comp_a,1,60.0,896.9733,79.5636,100.0,99.4367,100.0,168,200,202.0917,254.0,32,0,150,105.8,896.9733,portfolio4 x4 on 4 cores
+2026-11-14 05:11,algo/portfolio,ba54058,,default,portfolio,fake_comp_a,fake_comp_a,2,60.0,898.6689,79.8589,100.0,99.5829,100.0,168,200,202.8417,254.0,32,0,121,91.7,898.6689,portfolio4 x4 on 4 cores
+2026-11-14 05:11,algo/portfolio,ba54058,,tw-first,portfolio,fake_comp_a,fake_comp_a,2,60.0,893.9244,78.9731,100.0,99.3726,100.0,167,200,200.5917,254.0,33,0,118,103.9,893.9244,portfolio4 x4 on 4 cores
+2026-11-14 05:13,algo/portfolio,ba54058,,default,portfolio,fake_comp_b,fake_comp_b,1,60.0,900.8959,80.746,100.0,98.1105,100.0,172,200,204.2875,253.0,28,0,147,80.4,900.8959,portfolio4 x4 on 4 cores
+2026-11-14 05:13,algo/portfolio,ba54058,,tw-first,portfolio,fake_comp_b,fake_comp_b,1,60.0,904.4087,81.4229,100.0,98.1961,100.0,172,200,206.0,253.0,28,0,195,90.0,904.4087,portfolio4 x4 on 4 cores
+2026-11-14 05:13,algo/portfolio,ba54058,,default,portfolio,fake_comp_b,fake_comp_b,2,60.0,903.6203,81.3076,100.0,98.0547,100.0,172,200,205.7083,253.0,28,0,141,79.7,903.6203,portfolio4 x4 on 4 cores
+2026-11-14 05:13,algo/portfolio,ba54058,,tw-first,portfolio,fake_comp_b,fake_comp_b,2,60.0,904.4388,81.4279,100.0,98.1996,100.0,173,200,206.0125,253.0,27,0,159,90.0,904.4388,portfolio4 x4 on 4 cores
