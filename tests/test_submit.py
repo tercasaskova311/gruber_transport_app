@@ -6,8 +6,8 @@ import shutil
 
 import pytest
 
-from gruber import loader, simulator, submit
-from gruber.api import COMPETITIVE
+from simulator import loader, simulator, submit
+from simulator.api import COMPETITIVE
 
 PARTS = ("cities", "trucks", "orders", "distance_matrix")
 

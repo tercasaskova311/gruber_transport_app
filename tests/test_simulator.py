@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from gruber import loader, simulator
-from gruber.simulator import drive_minutes
+from simulator import loader, simulator
+from simulator.simulator import drive_minutes
 
 
 def make_scenario(dist_rows, trucks, orders):

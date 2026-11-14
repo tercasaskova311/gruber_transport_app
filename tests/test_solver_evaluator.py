@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "solver"))
 import evaluator as ev  # noqa: E402
 from instance import load_instance  # noqa: E402
 
-from gruber import loader, simulator  # noqa: E402
+from simulator import loader, simulator  # noqa: E402
 from tools import plangen  # noqa: E402
 
 SCENARIOS = ["scenario_small", "scenario_middle", "scenario_big", "scenario_competitive"]

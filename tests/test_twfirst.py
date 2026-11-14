@@ -13,7 +13,7 @@ import twfirst  # noqa: E402
 from instance import load_instance  # noqa: E402
 from solver import check_plan  # noqa: E402
 
-from gruber import loader, simulator  # noqa: E402
+from simulator import loader, simulator  # noqa: E402
 
 DIRS = [ROOT / "data" / "fake" / "fake_big_a"] + loader.list_snapshots("scenario_middle")[-1:]
 

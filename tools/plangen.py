@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import random
 
-from gruber.loader import Scenario
+from simulator.loader import Scenario
 
 
 def compatible(sc: Scenario, o, t) -> bool:

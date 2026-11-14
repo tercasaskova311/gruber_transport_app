@@ -14,7 +14,7 @@ import argparse
 import json
 from collections import Counter
 
-from gruber import loader, simulator
+from simulator import loader, simulator
 
 
 def P(o): return {"action": "pickup", "order": o}
