@@ -3,6 +3,87 @@
 Gruber Logistics hackathon 2026. Truck plan solver, local copy of the official simulator, and a dashboard.
 Rules and team workflow: see `CLAUDE.md`.
 
+## How the solver works
+
+### The problem
+
+We get a list of orders (pick up here, deliver there), a fleet of trucks, and the distances
+between cities. We decide which truck carries which order and in what sequence it makes its stops.
+A plan scores up to 1000 points:
+
+- half of the score is how much order value gets delivered;
+- the other half is low cost, low CO2 and few empty kilometres.
+
+Trucks differ in size and type (standard, refrigerated, hazardous goods), drivers must take breaks,
+and some orders have a time window: more than 60 minutes late and the order does not count.
+
+There are far too many possible plans to try them all, so we improve a plan step by step.
+
+### The base: destroy and repair (ALNS)
+
+1. **Build a first plan.** Add the orders one at a time, each at the place where it raises the
+   score the most. Orders with a time window go first.
+2. **Destroy.** Take a few orders out of the plan (5 % to 30 % of them). Several rules choose
+   which: random ones, the ones that add little, ones close to each other, a whole truck, or the
+   ones next to a long empty drive.
+3. **Repair.** Put them back, each at its best place.
+4. **Keep or discard.** A better plan is kept. A slightly worse one is sometimes kept too,
+   often at the start and rarely at the end, so the search does not get stuck too early.
+5. **Learn.** Rules that found improvements are picked more often.
+6. Repeat steps 2 to 5 until the time is up, then return the best plan seen.
+
+This method is called Adaptive Large Neighbourhood Search (ALNS). One thing is special in our
+version: every decision is judged by the **real score**. We wrote an exact copy of the official
+simulator (it matches the API on 156 test plans, to the last digit), so the solver never works
+with an estimate.
+
+### What we added on top
+
+Each add-on was kept only if it helped across all our test data (the 4 official scenarios plus
+3 that we generated ourselves) and several random starts. The numbers are for the largest
+scenario, `competitive` (200 orders, 25 trucks), averaged over runs of 60 seconds.
+
+| Step | What it does | Score |
+|---|---|---|
+| First plan only | step 1 above, no improvement loop | 908 |
+| Base ALNS | the destroy and repair loop | 916 |
+| + Speed | the same search with less repeated work, so 1.5 to 2 times more steps in the same time | 920 |
+| + Making room | for an order that is left out: take one or two orders off a truck that could reach it in time, put the left-out order in, and find new places for the ones taken off | 925 |
+| + Time windows first | plan only the time-window orders first, as their own small puzzle, then fit all other orders around them and do not move them again | 928 |
+| + Several runs | run the normal version and the time-windows-first version side by side with different random starts, for 5 minutes each, and keep the best plan | 932.22 |
+| + Polishing | take the finished plan and try thousands of tiny changes (move 1 to 3 orders to a better place), keeping only the ones that raise the score; this removes some empty kilometres | **932.26** |
+
+"Time windows first" helps on some data and hurts on other data, so it is not the default.
+Running both versions and keeping the better plan gets the gain without the risk.
+
+### What we tried that did not help
+
+- **Reducing empty first drives.** The empty kilometres that remain are forced by truck size and
+  time windows.
+- **Removing whole stretches of neighbouring routes at once** (the SISR method). Same score.
+- **Changing how much is destroyed, and restarting when stuck.** Smaller steps after a success, larger
+  ones when nothing improves, and a restart from the best plan after a long quiet period. Same score.
+- **Mixing routes from different plans.** The orders that only some plans deliver all need the same
+  truck at the same hour, so the best mix is no better than the best single plan.
+
+Many different plans end at the same score and leave out the same orders. We also searched the
+time-window orders on their own, for 4 minutes and with three different search styles: every run
+stops at the same 42 of 63. For this data we believe we are close to the best score that can be
+reached; what polishing still finds is in the second decimal.
+
+### Scores
+
+| Scenario | Orders | Delivered | Confirmed by the official API | Best plan after polishing (local exact simulator) |
+|---|---|---|---|---|
+| small | 20 | 20 | 1000.00 | 1000.00 |
+| middle | 50 | 50 | 997.28 | 997.28 |
+| big | 120 | 115 | 971.72 | 971.75 |
+| competitive | 200 | 179 | 932.22 | 932.26 |
+
+The local simulator has matched the API to the last digit on every submission so far.
+All plans have zero rule violations. Measurements behind this section: `experiments/RESULTS.md`.
+Technical details: `solver/README.md`.
+
 ## Calling the Gruber API
 
 **scenario_competitive allows only 3 Simulate + 3 Score calls per team, in total.**
@@ -45,6 +126,12 @@ for sid in ("scenario_big", "scenario_competitive"):
     open(f"out/submit/plan_{sid.split('_')[1]}.json", "w").write(plan)
     print(sid, run_id, round(score, 2))
 EOF
+```
+
+Optional last step, to gain a few hundredths: polish the plan (no API calls, plan must be for this snapshot):
+
+```bash
+python3 -m tools.polish data/scenario_big/<snapshot> out/submit/big/best_plan.json --time 300 --out out/submit/big/polished.json
 ```
 
 `out/` is git-ignored. On Windows use `python` instead of `python3`.

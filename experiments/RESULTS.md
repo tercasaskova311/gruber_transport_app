@@ -198,3 +198,23 @@ are identical; the orders served by only some plans compete for the same truck a
 (the best combination of all observed per-truck sets serves 42 of 63 time-window orders, the
 same as the best single plan). On big the same holds for 15 of 20. A set-partitioning step over
 the pool of routes was therefore not built: it has nothing to gain on fulfilment.
+
+## Polishing finished plans (`tools/polish.py`, 2026-11-14)
+
+Start from a finished plan; take 1-3 orders out and put them back at their best place on any
+compatible truck (wide search); keep only strict improvements of the exact score.
+
+| scenario | start plan | start | after 300 s (seed 1 / seed 2) | best so far | fulfilled | loaded % start -> best |
+|---|---|---|---|---|---|---|
+| middle | submitted 997.28 | 997.2781 | 997.2809 / 997.2809 | 997.2809 | 50/50 | 98.185 -> 98.187 |
+| big | submitted 971.72 | 971.7206 | 971.7486 / 971.7433 | 971.7486 | 115/120 | 99.538 -> 99.557 |
+| competitive | submitted 932.22 | 932.2162 | 932.2350 / 932.2346, then +600 s: 932.2580 / 932.2531 | 932.2580 | 179/200 | 99.134 -> 99.162 |
+
+Four other competitive plans (932.19-932.21) polished for 290 s end at 932.2340-932.2543: same
+place, no better starting plan. The one late order on competitive (O055 on T20, 6 min, -0.149
+points) is forced: no reordering of T20's first stops, no relocation of 1-2 of its earlier orders
+and no other place for O055 scores higher.
+
+Time-window orders alone on competitive (value-only sub-problem, 240 s, with ejection):
+`sisr-only` seed 2 and normal+`sisr` seed 4 serve 42 of 63 (value 68.0, the same 42 orders as the
+submitted plan); normal seed 3 and `sisr-only` seed 5 serve 41 (66.5). No improvement after 82 s.
