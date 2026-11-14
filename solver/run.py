@@ -89,7 +89,7 @@ def save_to_results(inst: Instance, plans: dict[str, dict], params: dict) -> Non
     """Score each plan with the verified simulator and store it in results.* (database)."""
     from types import SimpleNamespace
 
-    from inference import load as dl                          # noqa: PLC0415
+    from ingestion import load as dl                          # noqa: PLC0415
     from simulator import loader, simulator                       # noqa: PLC0415
 
     con = dl.connect(read_only=False)

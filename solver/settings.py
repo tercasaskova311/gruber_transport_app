@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))      # so `database` and `gruber` import as packages
 
-from inference.config import DB_PATH  # noqa: E402,F401
+from ingestion.config import DB_PATH  # noqa: E402,F401
 
 # Where the scenario data comes from:
 #   "db"   -> data_layer's DuckDB (prep.* tables), built by data_layer/run_all.sh
