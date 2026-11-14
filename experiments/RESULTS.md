@@ -31,6 +31,7 @@ scenarios the largest observed std, 3.1, is used for all three.)
 | ejection sweep (config `eject`) | algo/ejection @ 9d2db83 | 1000.00 (0) | 997.11 (-0.03, noise) | 970.51 (**-1.15**, worse) | 924.88 (**+4.97**, at the threshold, all 3 seeds above best's max) | 926.91 (+1.14, noise) | 898.07 (+1.73, noise) | 903.90 (-0.25, noise) | accept: competitive better; the big drop was seed luck (8-seed check below) | **accepted**, merged into best, on by default |
 | ejection + blocking destroy (config `eject+block`, 3 scenarios only) | algo/ejection @ 9d2db83 | - | - | 971.05 (-0.61, worse) | 924.18 (+4.27, noise) | - | 897.66 (+1.32, noise) | - | no gain over `eject` alone | kept in code, off |
 | **best** after merging ejection (current reference; big = 8 seeds) | best @ cb9aeb5 | 1000.00 | 997.15 | 971.19 (8 seeds: 2 low, 6 high) | 924.50 | 926.85 | 898.02 | 902.30 | reference for the next experiments | - |
+| first-leg moves (config `loaded`; reduced benchmark) | algo/loaded @ 7ee2d47 | - | 997.13 (-0.02, noise) | 971.03 (8 seeds: 3 low, 5 high; -0.16, noise) | 923.91 (-0.59, noise) | - | - | 903.71 (+1.41, noise) | reject: no effect | pending |
 
 Note: runs are time-limited, so the same code and seeds do not repeat exactly (compare the two
 rows above: same code, competitive 919.16 vs 919.91, fake_big_a 926.87 vs 925.77 with one seed
@@ -100,3 +101,15 @@ empty km), with or without ejection:
 So the earlier "big -1.15" for ejection was luck, and so was the 6-of-6 high plateau of `best`.
 **Corrected threshold for big: 1.5** with 3 seeds (not 0.5); for a firm answer on big use 8 seeds.
 A fair 3-seed reference for big is about 971.0, not 971.66.
+
+## algo/loaded findings
+
+- All empty km in the plans are first legs (truck start -> first pickup); mid-route empty km are 0.
+- Applying the first-leg moves to 17 final plans of `best` (big x8, competitive x3, fake_comp_a x3,
+  fake_comp_b x3) found 0 improving moves. During runs the sweep applies 1-11 small moves on
+  intermediate plans (under 1 s per run), without effect on the final score.
+- Checked by hand: middle T02 (284 km empty, 8,000 kg) carries O014 (6,400 kg, pickup window
+  405-540); the two orders waiting at its start weigh 2,300 and 5,200 kg and cannot ride along, and
+  delivering either first makes O014 465-750 min late. Big T10 (1,295 km empty) is the same story
+  with O028. These empty legs are forced by capacity and time windows.
+- Middle at about 997.1 therefore looks like the practical optimum for this snapshot.
