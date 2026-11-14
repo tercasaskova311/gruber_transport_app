@@ -28,7 +28,7 @@ scenarios the largest observed std, 3.1, is used for all three.)
 | baseline | bench @ d3c8304 | 1000.00 | 997.13 | 969.85 | 916.00 | 923.47 | 895.81 | 901.74 | reference | - |
 | speed (same search, 1.5-2x more iterations) | algo/speed @ 61f4814 | 1000.00 (0) | 997.11 (-0.02, noise) | 971.59 (**+1.74**) | 919.16 (+3.16, noise) | 926.87 (**+3.40**) | 897.21 (+1.40, noise) | 903.44 (+1.70, noise) | accept as infrastructure: nothing worse, big and fake_big_a better beyond noise, competitive up but within noise | **accepted**, merged into best |
 | **best** after merging speed (re-run, current reference) | best @ 0fd3103 | 1000.00 | 997.14 | 971.66 | 919.91 | 925.77 | 896.34 | 904.15 | reference for the next experiments | - |
-| ejection sweep (config `eject`) | algo/ejection @ 9d2db83 | 1000.00 (0) | 997.11 (-0.03, noise) | 970.51 (**-1.15**, worse) | 924.88 (**+4.97**, at the threshold, all 3 seeds above best's max) | 926.91 (+1.14, noise) | 898.07 (+1.73, noise) | 903.90 (-0.25, noise) | refine: competitive better, big worse | pending |
+| ejection sweep (config `eject`) | algo/ejection @ 9d2db83 | 1000.00 (0) | 997.11 (-0.03, noise) | 970.51 (**-1.15**, worse) | 924.88 (**+4.97**, at the threshold, all 3 seeds above best's max) | 926.91 (+1.14, noise) | 898.07 (+1.73, noise) | 903.90 (-0.25, noise) | accept: competitive better; the big drop was seed luck (8-seed check below) | pending |
 | ejection + blocking destroy (config `eject+block`, 3 scenarios only) | algo/ejection @ 9d2db83 | - | - | 971.05 (-0.61, worse) | 924.18 (+4.27, noise) | - | 897.66 (+1.32, noise) | - | no gain over `eject` alone | pending |
 
 Note: runs are time-limited, so the same code and seeds do not repeat exactly (compare the two
@@ -85,3 +85,17 @@ Side finding (diagnostic, not a proven bound): solving ONLY the time-window orde
 value-only objective, the same ALNS serves 41 of 63 on competitive (full plans: 39-40), 15 of 20
 on big (full plans: 15) and 29 of 60 on fake_comp_a (full plans: 28). The plans are probably
 close to the number of time-window orders that can be served at all.
+
+## Big is bimodal (8 seeds, 60 s, algo/ejection @ eb63cd4)
+
+Runs on big end on one of two plateaus, about 969.9 or about 971.6 (same 115 orders, different
+empty km), with or without ejection:
+
+| config | mean | std | min | max | runs on the low plateau |
+|---|---|---|---|---|---|
+| default | 970.98 | 0.88 | 969.87 | 971.69 | 3 of 8 (seeds 1, 5, 6) |
+| eject | 971.00 | 0.86 | 969.83 | 971.71 | 3 of 8 (seeds 1, 3, 4) |
+
+So the earlier "big -1.15" for ejection was luck, and so was the 6-of-6 high plateau of `best`.
+**Corrected threshold for big: 1.5** with 3 seeds (not 0.5); for a firm answer on big use 8 seeds.
+A fair 3-seed reference for big is about 971.0, not 971.66.
