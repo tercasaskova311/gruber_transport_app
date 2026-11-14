@@ -587,7 +587,8 @@ def inject_css():
       .st-key-dock_scroll button p {{ font-size: 0.84rem; font-weight: 700; }}
 
       /* ---------- Legend ---------- */
-      .legend {{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 12px 6px 0; }}
+      .legend {{ width: fit-content; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px;
+                 padding: 8px 16px; border-radius: 999px; }}
       .idle {{ padding: 9px 10px; }}
       .unserved .row {{ grid-template-columns: minmax(0, 1fr) auto; }}
       .legend span {{ display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 0.74rem;
@@ -804,7 +805,7 @@ def legend_html(show_unplanned=True, show_here=False):
             f'stroke="{CITY_RING}" stroke-width="1.5"/></svg>')
     ring = f'<svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="none" stroke="{RED}" stroke-width="2"/></svg>'
     here = f'<svg width="16" height="16"><circle cx="8" cy="8" r="5" fill="{TEXT}" stroke="{ACCENT}" stroke-width="3"/></svg>'
-    html(f'<div class="legend"><span>{solid} With cargo</span><span>{dashed} Empty</span>'
+    html(f'<div class="legend lg"><span>{solid} With cargo</span><span>{dashed} Empty</span>'
          f'<span>{city} City (bigger = more orders)</span>'
          + (f'<span>{ring} Order not served</span>' if show_unplanned else "")
          + (f'<span>{here} You are here</span>' if show_here else "") + "</div>")
