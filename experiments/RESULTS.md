@@ -36,6 +36,7 @@ scenarios the largest observed std, 3.1, is used for all three.)
 | same, soft protection (config `tw-first-soft`, 3 scenarios x 3 seeds) | algo/tw-first @ cec1039 | - | - | 971.11 | 928.10 | - | 896.13 | - | same as hard within noise | merged as config, off |
 | **best** after merging tw-first as opt-in (default config, re-run) | best @ 8dea097 | 1000.00 | 997.10 | 970.48 (3 seeds: 2 low, 1 high) | 923.72 | 926.86 | 898.04 | 905.08 | default unchanged: all within noise of the reference above | - |
 | portfolio: best of `default` + `tw-first`, same seed, 2 in parallel (computed from existing runs; this row is a best-of-2, not a single-run mean) | algo/portfolio | 1000.00 (0) | 997.12 (0) | 971.37 (+0.33, noise) | 928.13 (**+4.89** vs default, 8 seeds) | 926.86 (0) | 898.17 (+0.21, noise) | 905.68 (+1.99, noise) | accept: never below default, takes the tw-first gain where it exists | **accepted**, merged into best |
+| SISR: string removal + blink repair (configs `sisr`, `sisr-only`, `tw-first+sisr`) | last-experiments @ de2a101 + working tree | 1000.00 (0) | 997.18 / 997.12 (noise) | 971.03 / 971.09 (+0.5, noise) | 922.87 / 923.99 (-2.1 / -0.9, noise); with tw-first 930.88 vs 928.84 (+2.0, noise) | 926.91 / 926.77 (noise) | 897.23 / 898.84 (noise) | 902.63 / 907.21 (-0.1 / +4.5, below the threshold of 5) | no gain beyond noise; 300 s on competitive ends at 932.22 vs 932.21 | **rejected as default** (code kept, off) |
 
 Note: runs are time-limited, so the same code and seeds do not repeat exactly (compare the two
 rows above: same code, competitive 919.16 vs 919.91, fake_big_a 926.87 vs 925.77 with one seed
@@ -155,3 +156,45 @@ per scenario.
 Four at once roughly halves the iterations of each run on this 4-core laptop, and C is within
 noise of B everywhere. On big, 3 of the 4 parallel runs ended on the low plateau; the fourth
 saved the result.
+
+## SISR details (quick budget, 60 s x seeds 1-3, 2 at once, snapshot 20261113_192945)
+
+`solver/sisr.py` (Christiaens & Vanden Berghe 2020): destroy `string` removes strings of
+consecutive stops from several routes near a seed stop (an order with a stop in a string is
+removed completely); repair `blink` is greedy insertion one order at a time, each candidate
+position skipped with probability 0.01. `sisr` = both added to the existing operators,
+`sisr-only` = only these two. Reference = `default` on the same code, seeds and budget
+(run of 2026-11-14 08:26, not in results.csv).
+
+| set | scenario | default mean (std) | sisr mean (std) | delta | sisr-only mean (std) | delta | fulfilled default / sisr / sisr-only | iterations default / sisr / sisr-only |
+|---|---|---|---|---|---|---|---|---|
+| real | small | 1000.00 (0.00) | 1000.00 (0.00) | 0 | 1000.00 (0.00) | 0 | 20 / 20 / 20 | 31278 / 19815 / 19643 |
+| real | middle | 997.15 (0.05) | 997.18 (0.04) | +0.03 | 997.12 (0.06) | -0.03 | 50 / 50 / 50 | 8964 / 6101 / 9443 |
+| real | big | 970.49 (1.03) | 971.03 (0.96) | +0.54 | 971.09 (1.08) | +0.60 | 115 / 115 / 115 | 988 / 840 / 1975 |
+| real | competitive | 924.93 (0.27) | 922.87 (3.42) | -2.06 | 923.99 (4.19) | -0.94 | 177.0 / 176.3 / 177.0 | 672 / 512 / 1069 |
+| fake | fake_big_a | 926.91 (0.00) | 926.91 (0.00) | 0 | 926.77 (0.09) | -0.14 | 107 / 107 / 107 | 520 / 443 / 956 |
+| fake | fake_comp_a | 898.05 (2.01) | 897.23 (0.82) | -0.82 | 898.84 (1.46) | +0.79 | 167.7 / 168.0 / 168.3 | 294 / 272 / 777 |
+| fake | fake_comp_b | 902.73 (2.01) | 902.63 (1.21) | -0.10 | 907.21 (0.32) | +4.48 | 172.0 / 171.7 / 173.0 | 305 / 373 / 1001 |
+
+No delta exceeds the noise thresholds (0.1 / 1.5 / 3 / 5). Big: both configs have 2 seeds on the
+high plateau and 1 on the low one, like `default`. `sisr-only` runs 2-3x more iterations (its
+repair is cheaper) and is the better of the two, but only fake_comp_b moves, and stays below 5.
+
+With the time-window skeleton (reference `tw-first`, seeds 1-3, algo/tw-first @ cec1039):
+
+| scenario | tw-first mean | tw-first+sisr mean (std, min-max) | delta |
+|---|---|---|---|
+| competitive | 928.84 | 930.88 (1.74, 928.89-932.04) | +2.04, noise |
+| fake_comp_a | 894.93 | 895.34 (0.96, 894.58-896.42) | +0.41, noise |
+| fake_comp_b | 905.68 | 906.33 (1.62, 904.47-907.44) | +0.65, noise |
+
+Long check on competitive (300 s, seed 1, 2 at once): `tw-first+sisr` 932.22 (179/200),
+`tw-first+sisr-only` 932.08 (179/200); `tw-first` alone gave 932.19-932.21 on 7 seeds. Same
+plateau, same 179 orders.
+
+Why no gain (analysis of the saved plans before this experiment): on competitive all 7 `tw-first`
+plans of 300 s miss exactly the same 21 time-window orders although only 17 % of their routes
+are identical; the orders served by only some plans compete for the same truck at the same hour
+(the best combination of all observed per-truck sets serves 42 of 63 time-window orders, the
+same as the best single plan). On big the same holds for 15 of 20. A set-partitioning step over
+the pool of routes was therefore not built: it has nothing to gain on fulfilment.

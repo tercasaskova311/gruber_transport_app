@@ -15,4 +15,9 @@ CONFIGS: dict[str, dict] = {
     "tw-first-free": {"eject": True, "tw_first": 0.2, "protect_release": 1.0},
     "block": {"block": True},                       # "blocking removal" destroy operator: no benefit measured
     "eject+block": {"eject": True, "block": True},
+    # sisr.py: string-removal destroy + greedy-with-blinks repair, as extra operators or as the only ones
+    "sisr": {"eject": True, "sisr": True},
+    "sisr-only": {"eject": True, "sisr_only": True},
+    "tw-first+sisr": {"eject": True, "tw_first": 0.2, "protect_release": 0.0, "sisr": True},
+    "tw-first+sisr-only": {"eject": True, "tw_first": 0.2, "protect_release": 0.0, "sisr_only": True},
 }

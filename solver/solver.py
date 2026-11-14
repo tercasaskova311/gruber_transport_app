@@ -383,7 +383,7 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
          verbose: bool = True, max_iters: int | None = None,
          eject: bool = False, eject_every: int = 50, eject_share: float = 0.25,
          block: bool = False, protect: set[int] | None = None,
-         protect_release: float = 0.0) -> tuple[Solution, ALNSLog]:
+         protect_release: float = 0.0, sisr: bool = False, sisr_only: bool = False) -> tuple[Solution, ALNSLog]:
     """Adaptive Large Neighbourhood Search (Ropke & Pisinger 2006) on the exact score.
 
     - destroy q orders, repair with ΔS insertion (all unassigned orders are retried too)
@@ -400,6 +400,10 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
     if block:
         destroy["block"] = ejection.d_block
     dn, rn = list(destroy), list(REPAIR)
+    if sisr or sisr_only:                    # sisr.py: string removal + greedy insertion with blinks
+        import sisr as sisr_ops              # imported here: sisr.py imports this module
+        destroy["string"] = sisr_ops.d_string
+        dn, rn = (["string"], ["blink"]) if sisr_only else (dn + ["string"], rn + ["blink"])
     w_d, w_r = {d: 1.0 for d in dn}, {r: 1.0 for r in rn}
     sc_d, sc_r = {d: 0.0 for d in dn}, {r: 0.0 for r in rn}
     ct_d, ct_r = {d: 0 for d in dn}, {r: 0 for r in rn}
@@ -452,7 +456,10 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
             insert_orders(inst, cand, first, rng, regret=1, topk=4 * topk, max_trucks=None)
         to_insert = removed + rng.sample(bank, min(bank_retry, len(bank)))
         rng.shuffle(to_insert)
-        insert_orders(inst, cand, to_insert, rng, topk=topk, max_trucks=max_trucks, **REPAIR[r])
+        if r == "blink":
+            sisr_ops.blink_insert(inst, cand, to_insert, rng, topk=topk, max_trucks=max_trucks)
+        else:
+            insert_orders(inst, cand, to_insert, rng, topk=topk, max_trucks=max_trucks, **REPAIR[r])
 
         stats_d[d]["used"] += 1; stats_r[r]["used"] += 1
         gain = 0.0
