@@ -99,7 +99,7 @@ def load(sid: str, snapshot: str | None = None) -> Scenario:
     else:
         snaps = list_snapshots(sid)
         if not snaps:
-            raise FileNotFoundError(f"no snapshot for {sid}; run `cd database && ./run_all.sh`")
+            raise FileNotFoundError(f"no snapshot for {sid}; run `cd data_layer && ./run_all.sh`")
         p = snaps[-1]
     rd = lambda n: json.loads((p / f"{n}.json").read_text())
     sp = rd("sample_plan") if (p / "sample_plan.json").exists() else None

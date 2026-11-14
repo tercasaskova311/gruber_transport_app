@@ -14,13 +14,13 @@ that maximises the official score, plus a demo around it.
 | Path | Part | What it is |
 |---|---|---|
 | `gruber/` | B, simulator | API client, JSON snapshot loader, **exact local copy of Validate / Simulate / Score** (verified on 156 API responses). The single source of truth for rules. |
-| `database/` | A, data | Python package. DuckDB pipeline: `raw.*` (append-only API data), `prep.*` (solver-ready features, rebuilt each run), `results.*` (every scored plan). `load.py` = connect / list_scenarios / save_run. |
+| `data_layer/` | A, data | Python package. DuckDB pipeline: `raw.*` (append-only API data), `prep.*` (solver-ready features, rebuilt each run), `results.*` (every scored plan). `load.py` = connect / list_scenarios / save_run. |
 | `solver/` | C, solver | Greedy ΔS insertion + ALNS. `instance.py` builds the in-memory `Instance` (from `prep.*` via `load_from_db()`, or from JSON); `settings.py` = run settings; `evaluator.py` must match `gruber/simulator.py`. |
 | `run_all.sh` | | One command: data layer → tests → solver. |
 | `tools/` | | `parity.py` (local vs saved API responses), `validate_fuzz.py`, `plangen.py` |
 | `tests/` | | pytest: simulator parity + solver evaluator |
 | `docs/` | | `semantics.md` (**verified API behaviour, read it before changing any rule**), challenge PDF, swagger |
-| `data/` | | All data: `hackathon.duckdb` (git-ignored), snapshots `data/<scenario>/<timestamp>/` (written by `database/fetch.py`), parity cases in `data/parity/` |
+| `data/` | | All data: `hackathon.duckdb` (git-ignored), snapshots `data/<scenario>/<timestamp>/` (written by `data_layer/fetch.py`), parity cases in `data/parity/` |
 
 ## Commands
 
@@ -30,7 +30,7 @@ python -m pytest -q tests                          # must pass before any commit
 python -m tools.parity compare                     # local simulator vs saved API responses
 python -m gruber.cli local scenario_small plan.json   # local score, no API call
 ./run_all.sh                                       # data layer -> tests -> solver (SKIP_FETCH=1 to reuse DB)
-cd database && ./run_all.sh                      # fetch -> prep tables -> checks
+cd data_layer && ./run_all.sh                      # fetch -> prep tables -> checks
 cd solver && python run.py                         # every scenario in the DB -> solver/out/ + results.runs
 cd solver && python run.py scenario_big --time 300 # one scenario; --source json <folder> for JSON; --no-save
 ```
@@ -57,7 +57,7 @@ checks both loaders build the same problem.
 - `solver/solver.py` and `evaluator.py` stay standard-library only; duckdb is imported only inside
   the DB loading / saving functions.
 - In SQL, every join includes `scenario_id` (ids like `C008` repeat across scenarios).
-- New `prep` table → add its key to `PREP_KEYS` in `database/checks.py`.
+- New `prep` table → add its key to `PREP_KEYS` in `data_layer/checks.py`.
 - `database` modules import each other with `try: from . import x / except ImportError: import x`
   so they work both as a package and as scripts. Keep that pattern.
 - Work on `develop` or a feature branch off it; don't commit to `main` directly.
@@ -85,7 +85,7 @@ checks both loaders build the same problem.
 | big | 30 | 15 | 120 | 17 % |
 | competitive | 45 | 25 | 200 | 32 % (3+3 API calls only) |
 
-A server restart regenerates all scenarios: re-fetch (`cd database && ./run_all.sh`), then `python -m tools.parity build`.
+A server restart regenerates all scenarios: re-fetch (`cd data_layer && ./run_all.sh`), then `python -m tools.parity build`.
 
 ## Solver approach (decided, don't re-litigate)
 

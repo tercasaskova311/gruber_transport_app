@@ -2,7 +2,7 @@
 problem as the JSON loader (instance.load_instance). Compared by id, because positions may
 differ. Then the solver must reach the same score on both.
 
-Skipped when the DuckDB file is missing (run database/run_all.sh). Fails if the DB and the
+Skipped when the DuckDB file is missing (run data_layer/run_all.sh). Fails if the DB and the
 newest JSON snapshot hold different data, e.g. after a server restart: re-fetch both.
 """
 import sys

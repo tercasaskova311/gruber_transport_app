@@ -109,6 +109,6 @@ python -m tools.parity compare            # saved API responses vs local simulat
 python -m tools.validate_fuzz 20          # random plans vs API Validate (free)
 ```
 
-After a server restart (new data): `cd database && ./run_all.sh`, then `python -m tools.parity build`, and
+After a server restart (new data): `cd data_layer && ./run_all.sh`, then `python -m tools.parity build`, and
 re-run parity with `python -m tools.parity send <scenario>` (asks y/n, uses Simulate/Score
 calls; never on competitive).

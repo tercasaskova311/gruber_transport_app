@@ -6,7 +6,7 @@ You can open it from Python, the DuckDB CLI (`duckdb data/hackathon.duckdb`), DB
 ## Quick start
 
 ```bash
-cd database
+cd data_layer
 pip install -r ../requirements.txt  # from the repo root file
 ./run_all.sh                        # fetch API -> build prep tables -> run checks
 ```
