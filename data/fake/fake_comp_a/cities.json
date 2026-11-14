@@ -1,0 +1,317 @@
+[
+ {
+  "id": "C001",
+  "name": "Paris",
+  "country": "FR",
+  "latitude": 48.86,
+  "longitude": 2.35
+ },
+ {
+  "id": "C002",
+  "name": "Linz",
+  "country": "AT",
+  "latitude": 48.31,
+  "longitude": 14.29
+ },
+ {
+  "id": "C003",
+  "name": "Gothenburg",
+  "country": "SE",
+  "latitude": 57.71,
+  "longitude": 11.97
+ },
+ {
+  "id": "C004",
+  "name": "Bratislava",
+  "country": "SK",
+  "latitude": 48.15,
+  "longitude": 17.11
+ },
+ {
+  "id": "C005",
+  "name": "Brussels",
+  "country": "BE",
+  "latitude": 50.85,
+  "longitude": 4.35
+ },
+ {
+  "id": "C006",
+  "name": "Lisbon",
+  "country": "PT",
+  "latitude": 38.72,
+  "longitude": -9.14
+ },
+ {
+  "id": "C007",
+  "name": "Copenhagen",
+  "country": "DK",
+  "latitude": 55.68,
+  "longitude": 12.57
+ },
+ {
+  "id": "C008",
+  "name": "Amsterdam",
+  "country": "NL",
+  "latitude": 52.37,
+  "longitude": 4.9
+ },
+ {
+  "id": "C009",
+  "name": "Zagreb",
+  "country": "HR",
+  "latitude": 45.81,
+  "longitude": 15.98
+ },
+ {
+  "id": "C010",
+  "name": "Prague",
+  "country": "CZ",
+  "latitude": 50.08,
+  "longitude": 14.44
+ },
+ {
+  "id": "C011",
+  "name": "Rome",
+  "country": "IT",
+  "latitude": 41.9,
+  "longitude": 12.5
+ },
+ {
+  "id": "C012",
+  "name": "Bordeaux",
+  "country": "FR",
+  "latitude": 44.84,
+  "longitude": -0.58
+ },
+ {
+  "id": "C013",
+  "name": "Munich",
+  "country": "DE",
+  "latitude": 48.14,
+  "longitude": 11.58
+ },
+ {
+  "id": "C014",
+  "name": "Madrid",
+  "country": "ES",
+  "latitude": 40.42,
+  "longitude": -3.7
+ },
+ {
+  "id": "C015",
+  "name": "Valencia",
+  "country": "ES",
+  "latitude": 39.47,
+  "longitude": -0.38
+ },
+ {
+  "id": "C016",
+  "name": "Bucharest",
+  "country": "RO",
+  "latitude": 44.43,
+  "longitude": 26.1
+ },
+ {
+  "id": "C017",
+  "name": "Trento",
+  "country": "IT",
+  "latitude": 46.07,
+  "longitude": 11.12
+ },
+ {
+  "id": "C018",
+  "name": "Berlin",
+  "country": "DE",
+  "latitude": 52.52,
+  "longitude": 13.4
+ },
+ {
+  "id": "C019",
+  "name": "Zurich",
+  "country": "CH",
+  "latitude": 47.38,
+  "longitude": 8.54
+ },
+ {
+  "id": "C020",
+  "name": "Cologne",
+  "country": "DE",
+  "latitude": 50.94,
+  "longitude": 6.96
+ },
+ {
+  "id": "C021",
+  "name": "Bolzano",
+  "country": "IT",
+  "latitude": 46.5,
+  "longitude": 11.35
+ },
+ {
+  "id": "C022",
+  "name": "Timisoara",
+  "country": "RO",
+  "latitude": 45.76,
+  "longitude": 21.23
+ },
+ {
+  "id": "C023",
+  "name": "Bologna",
+  "country": "IT",
+  "latitude": 44.49,
+  "longitude": 11.34
+ },
+ {
+  "id": "C024",
+  "name": "Vienna",
+  "country": "AT",
+  "latitude": 48.21,
+  "longitude": 16.37
+ },
+ {
+  "id": "C025",
+  "name": "Graz",
+  "country": "AT",
+  "latitude": 47.07,
+  "longitude": 15.44
+ },
+ {
+  "id": "C026",
+  "name": "Verona",
+  "country": "IT",
+  "latitude": 45.44,
+  "longitude": 10.99
+ },
+ {
+  "id": "C027",
+  "name": "Warsaw",
+  "country": "PL",
+  "latitude": 52.23,
+  "longitude": 21.01
+ },
+ {
+  "id": "C028",
+  "name": "Sofia",
+  "country": "BG",
+  "latitude": 42.7,
+  "longitude": 23.32
+ },
+ {
+  "id": "C029",
+  "name": "Genoa",
+  "country": "IT",
+  "latitude": 44.41,
+  "longitude": 8.93
+ },
+ {
+  "id": "C030",
+  "name": "Naples",
+  "country": "IT",
+  "latitude": 40.85,
+  "longitude": 14.27
+ },
+ {
+  "id": "C031",
+  "name": "Turin",
+  "country": "IT",
+  "latitude": 45.07,
+  "longitude": 7.69
+ },
+ {
+  "id": "C032",
+  "name": "Krakow",
+  "country": "PL",
+  "latitude": 50.06,
+  "longitude": 19.94
+ },
+ {
+  "id": "C033",
+  "name": "Strasbourg",
+  "country": "FR",
+  "latitude": 48.57,
+  "longitude": 7.75
+ },
+ {
+  "id": "C034",
+  "name": "Stuttgart",
+  "country": "DE",
+  "latitude": 48.78,
+  "longitude": 9.18
+ },
+ {
+  "id": "C035",
+  "name": "Nuremberg",
+  "country": "DE",
+  "latitude": 49.45,
+  "longitude": 11.08
+ },
+ {
+  "id": "C036",
+  "name": "Innsbruck",
+  "country": "AT",
+  "latitude": 47.27,
+  "longitude": 11.4
+ },
+ {
+  "id": "C037",
+  "name": "Venice",
+  "country": "IT",
+  "latitude": 45.44,
+  "longitude": 12.32
+ },
+ {
+  "id": "C038",
+  "name": "Budapest",
+  "country": "HU",
+  "latitude": 47.5,
+  "longitude": 19.04
+ },
+ {
+  "id": "C039",
+  "name": "Marseille",
+  "country": "FR",
+  "latitude": 43.3,
+  "longitude": 5.37
+ },
+ {
+  "id": "C040",
+  "name": "Milan",
+  "country": "IT",
+  "latitude": 45.46,
+  "longitude": 9.19
+ },
+ {
+  "id": "C041",
+  "name": "Hamburg",
+  "country": "DE",
+  "latitude": 53.55,
+  "longitude": 9.99
+ },
+ {
+  "id": "C042",
+  "name": "Rotterdam",
+  "country": "NL",
+  "latitude": 51.92,
+  "longitude": 4.48
+ },
+ {
+  "id": "C043",
+  "name": "Florence",
+  "country": "IT",
+  "latitude": 43.77,
+  "longitude": 11.26
+ },
+ {
+  "id": "C044",
+  "name": "Lyon",
+  "country": "FR",
+  "latitude": 45.76,
+  "longitude": 4.84
+ },
+ {
+  "id": "C045",
+  "name": "Barcelona",
+  "country": "ES",
+  "latitude": 41.39,
+  "longitude": 2.17
+ }
+]

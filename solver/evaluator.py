@@ -58,6 +58,7 @@ class TruckResult:
     late: dict = field(default_factory=dict)   # order idx -> minutes late (only if > 0)
     states: list | None = None      # state after each stop (for resuming), if recorded
     stop_late: list | None = None   # lateness at each stop, if recorded
+    late_stops: list | None = None  # (stop index, order, minutes late) for late stops, if recorded
 
 
 @dataclass(slots=True)
@@ -95,33 +96,47 @@ INFEASIBLE = TruckResult(feasible=False)
 
 
 def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_exit: bool = True,
-                   base: TruckResult | None = None, start: int = 0, record: bool = False) -> TruckResult:
+                   base: TruckResult | None = None, start: int = 0, record: bool = False,
+                   stop: int | None = None) -> TruckResult:
     """Simulate one truck. route = [(is_pickup, order_idx), ...] in visiting order.
 
     early_exit=True  stop at the first broken rule (fast; used by the search)
     early_exit=False simulate everything (used for reporting)
     base, start      resume from base.states[start] (state after the first `start` stops of a
                      route whose first `start` stops are identical). Exact, just faster.
+                     base must have been simulated with record=True. Pickup-before-delivery is
+                     only checked in a full simulation (base=None): callers that resume must
+                     build routes with the pickup first (the search always does).
     record           store the state after every stop (so later insertions can resume)
+    stop             simulate the clock only for the first `stop` stops; the rest of the route
+                     must be identical to the end of base's route, start in the same city with
+                     the same load, and contain no time-window stop. Its km are then taken from
+                     base. Everything the score uses (km, loaded km, cost, CO2, value, fulfilled)
+                     is exact; finish_min, drive_min and break_rest_min are NOT (clock stopped
+                     early), so such a result must not be stored as the route's state.
     """
     if not route:
         return EMPTY
     t = inst.trucks[k]
     D = inst.D
+    M = inst.M
     orders = inst.orders
     late: dict[int, float] = {}
     picked: set[int] = set()
     stop_late: list[float] = []
+    late_stops: list = []
     if base is not None and start > 0 and base.states:
         (city, now, sb, sr, brk, idle, load, km, loaded_km, load_km, max_load, drive_total) = base.states[start]
-        for (is_p, oi), lm in zip(route[:start], base.stop_late):
-            if is_p:
-                picked.add(oi)
+        for j, oi, lm in base.late_stops:
+            if j >= start:
+                break
             if lm > late.get(oi, 0.0):
                 late[oi] = lm
         if record:
             stop_late = base.stop_late[:start]
+            late_stops = [x for x in base.late_stops if x[0] < start]
         i0 = start
+        check = False
     else:
         city = t.start
         now = sb = sr = brk = 0.0              # clock, since break, since rest, break+rest total
@@ -129,6 +144,7 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
         load = km = loaded_km = load_km = max_load = 0.0
         drive_total = 0
         i0 = 0
+        check = True
     states = None
     if record:
         states = base.states[:start + 1] if (base is not None and start > 0 and base.states) else \
@@ -136,7 +152,8 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
     feasible = True
     cap_kg = t.capacity + 1e-9
 
-    for idx in range(i0, len(route)):
+    n_sim = len(route) if stop is None or stop >= len(route) else stop
+    for idx in range(i0, n_sim):
         is_p, oi = route[idx]
         o = orders[oi]
         dest = o.p if is_p else o.d
@@ -146,7 +163,7 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
             if load > 0:
                 loaded_km += d
                 load_km += load * d
-            rem = math.ceil(d * 60 / SPEED_KMH)
+            rem = M[city][dest]
             drive_total += rem
             # standing still long enough before driving counts as a rest / break
             if idle >= REST_MIN:                # unverified (unreachable with current data)
@@ -189,7 +206,8 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
         idle += wait + SERVICE_MIN          # adds up over same-city stops (no driving between)
         if is_p:
             load += o.weight
-            picked.add(oi)
+            if check:
+                picked.add(oi)
             if load > cap_kg:
                 if early_exit:
                     return INFEASIBLE
@@ -197,14 +215,27 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
             if load > max_load:
                 max_load = load
         else:
-            if oi not in picked:
+            if check and oi not in picked:
                 if early_exit:
                     return INFEASIBLE
                 feasible = False
             load -= o.weight
         if record:
             stop_late.append(lm)
+            if lm > 0:
+                late_stops.append((idx, oi, lm))
             states.append((city, now, sb, sr, brk, idle, load, km, loaded_km, load_km, max_load, drive_total))
+
+    if n_sim < len(route):
+        # tail: same legs and loads as the end of base's route, no time windows -> only km matter
+        bs = base.states
+        b0 = bs[n_sim - (len(route) - len(bs) + 1)]
+        b1 = bs[-1]
+        km += b1[7] - b0[7]
+        loaded_km += b1[8] - b0[8]
+        load_km += b1[9] - b0[9]
+        if b1[10] > max_load:
+            max_load = b1[10]
 
     if MAX_FINISH_MIN is not None and now > MAX_FINISH_MIN:
         if early_exit:
@@ -213,18 +244,27 @@ def simulate_truck(inst: Instance, k: int, route: list[tuple[bool, int]], early_
 
     value = 0.0
     n_f = 0
-    for oi in picked:
-        lm = late.get(oi, 0.0)
-        if lm > LATE_GRACE_MIN:
-            feasible = False            # never accept "too late" inside the search
-            continue
-        f = 1.0 - (1.0 - LATE_MIN_FACTOR) * lm / LATE_GRACE_MIN if lm > 0 else 1.0
-        value += orders[oi].value * f
-        n_f += 1
+    if late:
+        for is_p, oi in route:
+            if not is_p:
+                continue
+            lm = late.get(oi, 0.0)
+            if lm > LATE_GRACE_MIN:
+                feasible = False            # never accept "too late" inside the search
+                continue
+            f = 1.0 - (1.0 - LATE_MIN_FACTOR) * lm / LATE_GRACE_MIN if lm > 0 else 1.0
+            value += orders[oi].value * f
+            n_f += 1
+    else:
+        for is_p, oi in route:
+            if is_p:
+                value += orders[oi].value
+                n_f += 1
 
     return TruckResult(km, loaded_km, km * t.cost_per_km, km * t.co2_per_km, value, n_f, feasible,
                        now, float(drive_total), brk, load_km, max_load, late,
-                       states if record else None, stop_late if record else None)
+                       states if record else None, stop_late if record else None,
+                       late_stops if record else None)
 
 
 def score(inst: Instance, tot: Totals) -> tuple[float, dict]:
@@ -242,4 +282,22 @@ def score(inst: Instance, tot: Totals) -> tuple[float, dict]:
 
 
 def score_value(inst: Instance, tot: Totals) -> float:
+    if inst.value_only:
+        return 1000.0 * tot.value / inst.value_total - inst.km_weight * tot.km
     return score(inst, tot)[0]
+
+
+def score_swapped(inst: Instance, tot: Totals, old: TruckResult, new: TruckResult) -> float:
+    """score_value(inst, tot.swapped(old, new)) without building objects (same arithmetic)."""
+    km = tot.km - old.km + new.km
+    if inst.value_only:
+        return 1000.0 * (tot.value - old.value + new.value) / inst.value_total - inst.km_weight * km
+    cost = tot.cost - old.cost + new.cost
+    co2 = tot.co2 - old.co2 + new.co2
+    n = inst.n_orders
+    F = 100.0 * (tot.value - old.value + new.value) / inst.value_total if inst.value_total else 0.0
+    ref_km = inst.direct_km_total * (tot.n_fulfilled - old.n_fulfilled + new.n_fulfilled) / n if n else 0.0
+    C = 100.0 * min(1.0, ref_km * inst.min_cost_per_km / cost) if cost > 0 else 0.0
+    E = 100.0 * min(1.0, ref_km * inst.min_co2_per_km / co2) if co2 > 0 else 0.0
+    L = 100.0 * (tot.loaded_km - old.loaded_km + new.loaded_km) / km if km > 0 else 0.0
+    return 10.0 * (0.50 * F + 0.20 * C + 0.15 * L + 0.15 * E)

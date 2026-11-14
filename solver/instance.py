@@ -13,6 +13,7 @@ Everything is converted to integer indices so the solver can use plain lists
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -71,6 +72,10 @@ class Instance:
     # where the data came from (set by load_from_db; empty for JSON folders)
     scenario_id: str = ""
     snapshot_id: str = ""
+    # sub-problems (twfirst.py): judge plans by value served minus a small km penalty, not by the score
+    value_only: bool = False
+    km_weight: float = 0.0
+    M: list[list[int]] = field(default_factory=list)   # driving minutes, ceil(km * 60 / 70)
 
     @property
     def n_orders(self) -> int:
@@ -239,6 +244,7 @@ def precompute(inst: Instance) -> None:
          if (o.required_type is None or t.type == o.required_type) and o.weight <= t.capacity]
         for o in inst.orders
     ]
+    inst.M = [[math.ceil(d * 60 / 70) for d in row] for row in inst.D]
     inst.direct_km = [inst.D[o.p][o.d] for o in inst.orders]
     inst.value_total = sum(o.value for o in inst.orders)
     inst.direct_km_total = sum(inst.direct_km)

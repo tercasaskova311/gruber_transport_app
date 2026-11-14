@@ -20,6 +20,7 @@ import time
 import evaluator as ev
 import settings
 from instance import Instance, load_from_db
+from configs import CONFIGS
 from run import save_to_results
 from solver import alns, check_plan, construct
 
@@ -69,7 +70,9 @@ def run_one(scenario: str, variant: str, seed: int, time_limit: float, experimen
     VARIANTS[variant](inst)
     t0 = time.time()
     start = max((construct(inst, seed=seed, regret=r) for r in (1, 2, 3)), key=lambda s: s.S)
-    best, log = alns(inst, start, time_limit=time_limit, seed=seed, verbose=False)
+    # same solver settings as run.py (configs.py "default", e.g. ejection on); tw-first keys are run.py-only
+    cfg = {k: v for k, v in CONFIGS["default"].items() if k not in ("tw_first", "protect_release")}
+    best, log = alns(inst, start, time_limit=time_limit, seed=seed, verbose=False, **cfg)
     assert not check_plan(inst, best), check_plan(inst, best)
     print(f"{scenario:<22} {variant:<9} seed {seed}: {best.S:8.2f}  "
           f"({log.iterations} it, {time.time() - t0:.0f}s)", flush=True)

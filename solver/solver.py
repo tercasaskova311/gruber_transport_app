@@ -17,7 +17,7 @@ import random
 import time
 from dataclasses import dataclass, field
 
-from evaluator import EMPTY, Totals, TruckResult, score_value, simulate_truck
+from evaluator import EMPTY, Totals, TruckResult, score_swapped, score_value, simulate_truck
 from instance import Instance
 
 Stop = tuple[bool, int]          # (is_pickup, order_idx)
@@ -34,15 +34,16 @@ class Solution:
     truck_of: dict[int, int]                  # order -> truck
     unassigned: set[int]
     S: float = 0.0
+    geo: list = field(default_factory=list)   # per truck: cached (cities, loads, leg km) of the route, or None
 
     @classmethod
     def empty(cls, inst: Instance) -> "Solution":
         n_t = len(inst.trucks)
-        return cls([[] for _ in range(n_t)], [EMPTY] * n_t, Totals(), {}, set(range(inst.n_orders)), 0.0)
+        return cls([[] for _ in range(n_t)], [EMPTY] * n_t, Totals(), {}, set(range(inst.n_orders)), 0.0, [None] * n_t)
 
     def copy(self) -> "Solution":
         return Solution([r[:] for r in self.routes], self.res[:], self.tot.copy(),
-                        dict(self.truck_of), set(self.unassigned), self.S)
+                        dict(self.truck_of), set(self.unassigned), self.S, self.geo[:])
 
     def set_route(self, inst: Instance, k: int, route: list[Stop], res: TruckResult | None = None) -> None:
         if res is None or (route and res.states is None):
@@ -50,6 +51,7 @@ class Solution:
         self.tot.add(self.res[k], -1)
         self.tot.add(res, +1)
         self.routes[k] = route
+        self.geo[k] = None
         self.res[k] = res
         self.S = score_value(inst, self.tot)
 
@@ -75,7 +77,7 @@ class Insertion:
     res: TruckResult
 
 
-def _candidates(inst: Instance, route: list[Stop], k: int, oi: int, topk: int):
+def _candidates(inst: Instance, sol: Solution, k: int, oi: int, topk: int):
     """All capacity-feasible (a, b) positions, ranked by extra km; return the best `topk`.
 
     The route visits cities c[0]=start, c[1..m]. Pickup goes after c[a], delivery after c[b], a ≤ b.
@@ -83,37 +85,64 @@ def _candidates(inst: Instance, route: list[Stop], k: int, oi: int, topk: int):
     t = inst.trucks[k]
     o = inst.orders[oi]
     D = inst.D
-    orders = inst.orders
+    route = sol.routes[k]
     m = len(route)
-    c = [t.start] + [orders[x].p if is_p else orders[x].d for is_p, x in route]
-    L = [0.0] * (m + 1)                       # load after position s
-    load = 0.0
-    for s, (is_p, x) in enumerate(route, 1):
-        load += orders[x].weight if is_p else -orders[x].weight
-        L[s] = load
+    g = sol.geo[k]
+    if g is None:                             # depends only on the route: computed once per route
+        orders = inst.orders
+        c = [t.start] + [orders[x].p if is_p else orders[x].d for is_p, x in route]
+        L = [0.0] * (m + 1)                   # load after position s
+        load = 0.0
+        for s, (is_p, x) in enumerate(route, 1):
+            load += orders[x].weight if is_p else -orders[x].weight
+            L[s] = load
+        leg = [D[c[s]][c[s + 1]] for s in range(m)]
+        g = sol.geo[k] = (c, L, leg)
+    c, L, leg = g
     cap = t.capacity - o.weight + 1e-9
     P, Q = o.p, o.d
     DP, DQ = D[P], D[Q]
     # extra km to visit P (resp. Q) right after position s
-    insP = [DP[c[s]] + DP[c[s + 1]] - D[c[s]][c[s + 1]] for s in range(m)] + [DP[c[m]]]
-    insQ = [DQ[c[s]] + DQ[c[s + 1]] - D[c[s]][c[s + 1]] for s in range(m)] + [DQ[c[m]]]
+    dp = [DP[x] for x in c]
+    dq = [DQ[x] for x in c]
+    insP = [dp[s] + dp[s + 1] - leg[s] for s in range(m)]
+    insP.append(dp[m])
+    insQ = [dq[s] + dq[s + 1] - leg[s] for s in range(m)]
+    insQ.append(dq[m])
     dPQ = DP[Q]
+    if (m + 1) * (m + 2) // 2 <= topk:
+        prune = False
+    else:
+        prune = True
+        sufmin = insQ[:]                      # sufmin[b] = min(insQ[b:])
+        for b in range(m - 1, -1, -1):
+            if sufmin[b + 1] < sufmin[b]:
+                sufmin[b] = sufmin[b + 1]
+    keep = 4 * topk
+    thr = float("inf")                        # km of the topk-th best candidate found so far
     cands = []
     for a in range(m + 1):
         if L[a] > cap:
             continue
         # delivery right after pickup
-        dk = DP[c[a]] + dPQ + (DQ[c[a + 1]] - D[c[a]][c[a + 1]] if a < m else 0.0)
-        cands.append((dk, a, a))
+        dk = dp[a] + dPQ + (dq[a + 1] - leg[a] if a < m else 0.0)
+        if dk <= thr:
+            cands.append((dk, a, a))
         ip = insP[a]
-        running = L[a]
-        for b in range(a + 1, m + 1):
-            lb = L[b]
-            if lb > running:
-                if lb > cap:
-                    break                     # the load window only grows → stop
-                running = lb
-            cands.append((ip + insQ[b], a, b))
+        if a < m and (not prune or ip + sufmin[a + 1] <= thr):
+            running = L[a]
+            lim = thr - ip
+            for b in range(a + 1, m + 1):
+                lb = L[b]
+                if lb > running:
+                    if lb > cap:
+                        break                 # the load window only grows → stop
+                    running = lb
+                if insQ[b] <= lim:
+                    cands.append((ip + insQ[b], a, b))
+        if prune and len(cands) > keep:       # keep only the best topk, tighten the threshold
+            cands = heapq.nsmallest(topk, cands)
+            thr = cands[-1][0]
     if len(cands) > topk:
         return heapq.nsmallest(topk, cands)
     return cands
@@ -122,13 +151,20 @@ def _candidates(inst: Instance, route: list[Stop], k: int, oi: int, topk: int):
 def best_insertion(inst: Instance, sol: Solution, oi: int, k: int, topk: int) -> Insertion | None:
     """Best feasible way to put order oi into truck k, judged by exact ΔS."""
     route = sol.routes[k]
+    base = sol.res[k]
+    tot, S = sol.tot, sol.S
+    # stops after the last time-window stop cannot change value: their clock is not simulated
+    O = inst.orders
+    lt = len(route) - 1
+    while lt >= 0 and (O[route[lt][1]].ptw if route[lt][0] else O[route[lt][1]].dtw) is None:
+        lt -= 1
     best = None
-    for _, a, b in _candidates(inst, route, k, oi, topk):
+    for _, a, b in _candidates(inst, sol, k, oi, topk):
         new_route = route[:a] + [(True, oi)] + route[a:b] + [(False, oi)] + route[b:]
-        r = simulate_truck(inst, k, new_route, base=sol.res[k], start=a)
+        r = simulate_truck(inst, k, new_route, base=base, start=a, stop=(b if b > lt else lt) + 3)
         if not r.feasible:
             continue
-        dS = score_value(inst, sol.tot.swapped(sol.res[k], r)) - sol.S
+        dS = score_swapped(inst, tot, base, r) - S
         if best is None or dS > best.dS:
             best = Insertion(dS, k, new_route, r)
     return best
@@ -178,7 +214,7 @@ def insert_orders(inst: Instance, sol: Solution, orders: list[int], rng: random.
                 ins = cache[key]
                 if ins is None:
                     continue
-                dS = score_value(inst, sol.tot.swapped(sol.res[k], ins.res)) - sol.S
+                dS = score_swapped(inst, sol.tot, sol.res[k], ins.res) - sol.S
                 if noise:
                     dS *= 1.0 + noise * (2 * rng.random() - 1)
                 opts.append((dS, ins))
@@ -250,7 +286,7 @@ def d_worst(inst, sol, q, rng, p=3.0):
         route = sol.routes[k]
         first = next(i for i, s in enumerate(route) if s[1] == oi)
         r = simulate_truck(inst, k, [s for s in route if s[1] != oi], base=sol.res[k], start=first)
-        loss.append((sol.S - score_value(inst, sol.tot.swapped(sol.res[k], r)), oi))
+        loss.append((sol.S - score_swapped(inst, sol.tot, sol.res[k], r), oi))
     loss.sort()
     out = []
     while loss and len(out) < q:
@@ -337,12 +373,17 @@ class ALNSLog:
     destroy_stats: dict = field(default_factory=dict)
     repair_stats: dict = field(default_factory=dict)
     iterations: int = 0
+    eject_moves: int = 0            # ejection moves applied (ejection.py)
+    eject_seconds: float = 0.0
 
 
 def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 0,
          topk: int = 3, max_trucks: int | None = 8, bank_retry: int = 8, segment: int = 50, reaction: float = 0.2,
          sigma=(33.0, 9.0, 13.0), t_start_pct: float = 0.005, t_end: float = 0.01,
-         verbose: bool = True) -> tuple[Solution, ALNSLog]:
+         verbose: bool = True, max_iters: int | None = None,
+         eject: bool = False, eject_every: int = 50, eject_share: float = 0.25,
+         block: bool = False, protect: set[int] | None = None,
+         protect_release: float = 0.0) -> tuple[Solution, ALNSLog]:
     """Adaptive Large Neighbourhood Search (Ropke & Pisinger 2006) on the exact score.
 
     - destroy q orders, repair with ΔS insertion (all unassigned orders are retried too)
@@ -353,7 +394,12 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
     cur, best = start.copy(), start.copy()
     log = ALNSLog()
     log.history.append((0, 0.0, best.S))
-    dn, rn = list(DESTROY), list(REPAIR)
+    destroy = dict(DESTROY)
+    if eject or block:
+        import ejection                      # imported here: ejection.py imports this module
+    if block:
+        destroy["block"] = ejection.d_block
+    dn, rn = list(destroy), list(REPAIR)
     w_d, w_r = {d: 1.0 for d in dn}, {r: 1.0 for r in rn}
     sc_d, sc_r = {d: 0.0 for d in dn}, {r: 0.0 for r in rn}
     ct_d, ct_r = {d: 0 for d in dn}, {r: 0 for r in rn}
@@ -367,9 +413,25 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
     n = inst.n_orders
     q_min, q_max = max(2, int(0.05 * n)), max(4, min(40, int(0.3 * n)))
 
+    sweep_budget = max(0.5, min(5.0, 0.05 * time_limit))
+
+    def sweep(sol):
+        """Ejection sweep on `sol` unless ejection already used its share of the time."""
+        if log.eject_seconds > eject_share * max(time.time() - t0, 4 * sweep_budget):
+            return sol
+        ts = time.time()
+        sol, n = ejection.eject_sweep(inst, sol, rng, time_budget=sweep_budget)
+        log.eject_seconds += time.time() - ts
+        log.eject_moves += n
+        return sol
+
+    if eject:
+        best = sweep(best)
+        cur = best.copy()
+
     while True:
         el = time.time() - t0
-        if el >= time_limit:
+        if el >= time_limit or (max_iters is not None and it >= max_iters):
             break
         it += 1
         T = T0 * (t_end / T0) ** (el / time_limit) if T0 > t_end else t_end
@@ -379,8 +441,15 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
 
         cand = cur.copy()
         bank = [o for o in cand.unassigned]
-        removed = DESTROY[d](inst, cand, q, rng)
+        removed = destroy[d](inst, cand, q, rng)
+        first = []
+        if isinstance(removed, tuple):       # operator names unserved orders to insert first
+            removed, first = removed
+        if protect:                          # protected orders leave their truck only with prob. protect_release
+            removed = [o for o in removed if o not in protect or rng.random() < protect_release]
         remove_orders(inst, cand, removed)
+        if first:
+            insert_orders(inst, cand, first, rng, regret=1, topk=4 * topk, max_trucks=None)
         to_insert = removed + rng.sample(bank, min(bank_retry, len(bank)))
         rng.shuffle(to_insert)
         insert_orders(inst, cand, to_insert, rng, topk=topk, max_trucks=max_trucks, **REPAIR[r])
@@ -393,12 +462,23 @@ def alns(inst: Instance, start: Solution, time_limit: float = 60.0, seed: int = 
             log.history.append((it, round(el, 2), best.S))
             if verbose:
                 print(f"  it {it:5d}  {el:6.1f}s  new best {best.S:8.2f}  ({d} + {r}, q={q})")
+            if eject:
+                cur = sweep(cur)
+                if cur.S > best.S + 1e-9:
+                    best = cur.copy()
+                    log.history.append((it, round(el, 2), best.S))
         elif cand.S > cur.S + 1e-9:
             cur, gain = cand, sigma[1]
             stats_d[d]["better"] += 1; stats_r[r]["better"] += 1
         elif rng.random() < math.exp((cand.S - cur.S) / T):
             cur, gain = cand, sigma[2]
             stats_d[d]["accepted"] += 1; stats_r[r]["accepted"] += 1
+
+        if eject and it % eject_every == 0:
+            cur = sweep(cur)
+            if cur.S > best.S + 1e-9:
+                best = cur.copy()
+                log.history.append((it, round(el, 2), best.S))
 
         sc_d[d] += gain; sc_r[r] += gain
         ct_d[d] += 1; ct_r[r] += 1
