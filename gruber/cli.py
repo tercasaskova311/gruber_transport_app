@@ -3,13 +3,16 @@
   python -m gruber.cli fetch [scenario ...]     # snapshot scenario data (free GETs)
   python -m gruber.cli validate <scenario> <plan.json>   # free API Validate + local check
   python -m gruber.cli local <scenario> <plan.json>      # local simulate + score only
+  python -m gruber.cli submit <scenario> <plan.json> [--snapshot <dir>] [--dry-run] [--i-am-sure]
+                                                # all free checks, then ONE Score call after y/N
 """
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 
-from . import loader, simulator, snapshot
+from . import loader, simulator, snapshot, submit
 from .api import Client
 
 
@@ -51,7 +54,14 @@ def main():
     for name in ("local", "validate"):
         p = sp.add_parser(name); p.add_argument("scenario"); p.add_argument("plan")
         p.add_argument("--snapshot")
+    p = sp.add_parser("submit", help="checked submission: fresh data, local score, Validate, y/N, Score")
+    p.add_argument("scenario"); p.add_argument("plan")
+    p.add_argument("--snapshot", help="snapshot the plan was built on (folder or name; default: latest)")
+    p.add_argument("--dry-run", action="store_true", help="run every check, send nothing to Score")
+    p.add_argument("--i-am-sure", action="store_true", help="required for scenario_competitive")
     a = ap.parse_args()
+    if a.cmd == "submit":
+        sys.exit(submit.run(a.scenario, a.plan, snapshot=a.snapshot, dry_run=a.dry_run, i_am_sure=a.i_am_sure))
     {"fetch": cmd_fetch, "local": cmd_local, "validate": cmd_validate}[a.cmd](a)
 
 
