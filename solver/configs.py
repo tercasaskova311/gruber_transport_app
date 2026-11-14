@@ -6,4 +6,8 @@ Experiments add entries here so the benchmark (tools/bench.py) can compare them 
 """
 CONFIGS: dict[str, dict] = {
     "default": {},
+    # algo/ejection: ejection-chain local search and/or the "blocking removal" destroy operator
+    "eject": {"eject": True},
+    "block": {"block": True},
+    "eject+block": {"eject": True, "block": True},
 }
