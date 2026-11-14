@@ -32,6 +32,8 @@ scenarios the largest observed std, 3.1, is used for all three.)
 | ejection + blocking destroy (config `eject+block`, 3 scenarios only) | algo/ejection @ 9d2db83 | - | - | 971.05 (-0.61, worse) | 924.18 (+4.27, noise) | - | 897.66 (+1.32, noise) | - | no gain over `eject` alone | kept in code, off |
 | **best** after merging ejection (current reference; big = 8 seeds) | best @ cb9aeb5 | 1000.00 | 997.15 | 971.19 (8 seeds: 2 low, 6 high) | 924.50 | 926.85 | 898.02 | 902.30 | reference for the next experiments | - |
 | first-leg moves (config `loaded`; reduced benchmark) | algo/loaded @ 7ee2d47 | - | 997.13 (-0.02, noise) | 971.03 (8 seeds: 3 low, 5 high; -0.16, noise) | 923.91 (-0.59, noise) | - | - | 903.71 (+1.41, noise) | reject: no effect | **rejected** (branch kept) |
+| time-window skeleton first, hard protection (config `tw-first`) | algo/tw-first @ cec1039 | 1000.00 (0) | 996.39 (**-0.76**, worse) | 971.05 (3 seeds; -0.14, noise) | 928.13 (8 seeds vs 923.39; **+4.74**, real) | 926.74 (-0.11, noise) | 895.56 (8 seeds vs 897.96; **-2.40**, worse) | 905.68 (+3.38, noise) | mixed: do not make default; keep as opt-in config for the portfolio | pending |
+| same, soft protection (config `tw-first-soft`, 3 scenarios x 3 seeds) | algo/tw-first @ cec1039 | - | - | 971.11 | 928.10 | - | 896.13 | - | same as hard within noise | pending |
 
 Note: runs are time-limited, so the same code and seeds do not repeat exactly (compare the two
 rows above: same code, competitive 919.16 vs 919.91, fake_big_a 926.87 vs 925.77 with one seed
@@ -113,3 +115,20 @@ A fair 3-seed reference for big is about 971.0, not 971.66.
   delivering either first makes O014 465-750 min late. Big T10 (1,295 km empty) is the same story
   with O028. These empty legs are forced by capacity and time windows.
 - Middle at about 997.1 therefore looks like the practical optimum for this snapshot.
+
+## algo/tw-first details (quick budget)
+
+Reference = `best` (default config) with the same seeds; competitive and fake_comp_a use 8 seeds.
+
+| set | scenario | seeds | best mean (std) | tw-first mean (std) | min | max | delta | fulfilled best -> tw-first | unserved TW | loaded best -> tw-first |
+|---|---|---|---|---|---|---|---|---|---|---|
+| real | small | 3 | 1000.00 (0.00) | 1000.00 (0.00) | 1000.00 | 1000.00 | 0 | 20 -> 20 | 0 | 100.00 -> 100.00 |
+| real | middle | 3 | 997.15 (0.05) | 996.39 (0.03) | 996.36 | 996.42 | -0.76 | 50 -> 50 | 0 | 98.10 -> 97.59 |
+| real | big | 8 / 3 | 971.19 (0.74) | 971.05 (1.02) | 969.87 | 971.68 | -0.14 | 115 -> 115 | 5.0 | 99.25 -> 99.09 |
+| real | competitive | 8 | 923.39 (1.99) | 928.13 (2.63) | 925.11 | 931.83 | +4.74 | 176.8 -> 177.9 | 23.2 -> 22.1 | 98.78 -> 98.85 |
+| fake | fake_big_a | 3 | 926.85 (0.10) | 926.74 (0.00) | 926.74 | 926.75 | -0.11 | 107 -> 107 | 13.0 | 99.96 -> 99.89 |
+| fake | fake_comp_a | 8 | 897.96 (0.68) | 895.56 (2.20) | 893.05 | 898.68 | -2.40 | 167.9 -> 167.5 | 32.1 -> 32.5 | 99.51 -> 99.33 |
+| fake | fake_comp_b | 3 | 902.30 (1.80) | 905.68 (1.20) | 904.98 | 907.07 | +3.38 | 171.7 -> 173.0 | 28.3 -> 27.0 | 98.28 -> 98.48 |
+
+Competitive, 8 seeds: best 919.4-924.9, tw-first 925.1-931.8 (every tw-first seed above every
+best seed). Best single plan so far on competitive: 931.83 (179/200).
