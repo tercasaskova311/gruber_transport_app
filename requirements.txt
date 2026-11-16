@@ -1,7 +1,7 @@
 requests
 numpy
 pytest
-duckdb>=1.1
+duckdb>=2.0          # data/hackathon.duckdb is written in the 2.0 format
 
 # dashboard/ (Streamlit UI)
 streamlit>=1.67      # segmented_control(required=...) is missing in 1.52
