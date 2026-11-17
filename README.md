@@ -92,7 +92,7 @@ The Streamlit dashboard opens on a sign-in screen. The account decides what you 
 
 | Role | Sees | Can do |
 |---|---|---|
-| **Dispatcher** | every route on the map, fleet numbers, unserved orders with the reason each one was left out | open any truck, preview the driver view |
+| **Dispatcher** | every route on the map, fleet numbers, unserved orders with the reason each one was left out, and a **Data** tab: row counts per pipeline layer, live data-quality check status, which snapshot the plan was built on, and the history of solver runs | open any truck, preview the driver view |
 | **Driver** | only the truck on their account | step through the stops, mark each one done |
 
 Demo accounts (shown on the sign-in screen): `dispatcher` / `dispatch-demo` and `driver` / `driver-demo`.
@@ -100,6 +100,17 @@ Real accounts go in `.streamlit/secrets.toml` (template: [`.streamlit/secrets.ex
 once that file has users, the demo accounts are switched off. Passwords are stored as salted
 PBKDF2 hashes (`python dashboard/auth.py '<password>'` makes one), and five wrong passwords in a
 row pause sign-in for 30 seconds. This is demo-grade access control, not user management.
+
+## Deploy the demo (Streamlit Community Cloud, free)
+
+1. Sign in at [share.streamlit.io](https://share.streamlit.io) with GitHub and click **Create app**.
+2. Repository `tercasaskova311/logiwise`, branch `main`, main file `dashboard/app.py`.
+   Under **Advanced settings** pick Python 3.12.
+3. Deploy. The committed `data/hackathon.duckdb` is all the app needs; no API key.
+4. Optional: paste real accounts into the app's **Secrets** (format in
+   `.streamlit/secrets.example.toml`). Without them the demo accounts stay on.
+
+The same image also runs anywhere Docker does (`docker run -p 8501:8501 logiwise`).
 
 ## Team
 

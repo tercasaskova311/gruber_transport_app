@@ -265,6 +265,37 @@ def explain_unserved(scenario, plan_file):
     return explain.explain_plan(load_from_db(scenario), load_plan(scenario, plan_file))
 
 
+@st.cache_data(ttl=60, show_spinner=False)
+def data_health(scenario, plan_file):
+    """What the Data tab shows: the pipeline layers, the data-quality checks and where the plan came from.
+    Runs the same ERROR / WARN queries as ingestion/checks.py, on a read-only connection."""
+    ingestion_dir = str(HERE.parent)
+    if ingestion_dir not in sys.path:
+        sys.path.insert(0, ingestion_dir)
+    from ingestion import checks                      # noqa: PLC0415
+    with _db() as con:
+        snap = con.execute("""SELECT snapshot_id, strftime(fetched_at, '%d %b %Y %H:%M'), fingerprint
+                              FROM raw.cur_snapshots WHERE scenario_id = ?""", [scenario]).fetchone()
+        layers = {}
+        for schema in ("raw", "prep", "results"):
+            tables = [t for (t,) in con.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE'",
+                [schema]).fetchall()]
+            rows = sum(con.execute(f'SELECT count(*) FROM {schema}."{t}"').fetchone()[0] for t in tables)
+            layers[schema] = (len(tables), rows)
+        failed = [name for name, sql in checks.ERRORS.items() if con.execute(sql).fetchall()]
+        warned = [name for name, sql in checks.WARNINGS.items() if con.execute(sql).fetchall()]
+        plan_row = con.execute("""SELECT r.snapshot_id, r.algo, r.source, strftime(r.created_at, '%d %b %Y %H:%M'),
+                                         r.snapshot_id = s.snapshot_id
+                                  FROM results.runs r LEFT JOIN raw.cur_snapshots s USING (scenario_id)
+                                  WHERE r.run_id = ?""", [_run_id(plan_file)]).fetchone()
+        history = con.execute("""SELECT strftime(created_at, '%d %b %H:%M'), algo, source, score,
+                                        orders_fulfilled, orders_total, n_violations
+                                 FROM results.runs WHERE scenario_id = ? ORDER BY created_at""", [scenario]).fetchall()
+    return dict(snapshot=snap, layers=layers, n_checks=len(checks.ERRORS), failed=failed, warned=warned,
+                plan=plan_row, history=history)
+
+
 @st.cache_data(ttl=30)
 def baseline_score(scenario):
     """Best score of the plain greedy start (algo 'construct'), or None if it was never run."""
@@ -421,6 +452,22 @@ def inject_css():
       .who {{ display: flex; align-items: center; gap: 10px; padding: 4px 4px 10px; border-bottom: 1px solid {HAIR}; margin-bottom: 6px; }}
       .avatar {{ width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none;
                  background: color-mix(in srgb, {ACCENT} 18%, transparent); color: {ACCENT}; font-weight: 800; font-size: 0.85rem; }}
+      .layers {{ display: flex; align-items: stretch; gap: 6px; }}
+      .layer {{ flex: 1; min-width: 0; padding: 10px 10px 8px; border-radius: 12px; border: 1px solid {HAIR};
+                background: color-mix(in srgb, {ROUTE_INK} 5%, transparent); }}
+      .layer .cap {{ white-space: normal; }}
+      .layers .arrow {{ align-self: center; color: {FAINT}; font-weight: 700; }}
+      .badge {{ display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; }}
+      .badge.ok {{ background: color-mix(in srgb, {ACCENT} 16%, transparent); color: {ACCENT}; }}
+      .badge.bad {{ background: color-mix(in srgb, {RED} 14%, transparent); color: {RED}; }}
+      .badge.warn {{ background: color-mix(in srgb, #E5A500 18%, transparent); color: #B07F00; }}
+      .kv {{ display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }}
+      .runs {{ display: flex; flex-direction: column; gap: 2px; }}
+      .run {{ display: grid; grid-template-columns: 82px 1fr 54px 64px; align-items: center; gap: 8px;
+              padding: 5px 8px; border-radius: 8px; }}
+      .run .vm {{ text-align: right; font-size: 0.9rem; }}
+      .run.best {{ background: color-mix(in srgb, {ACCENT} 12%, transparent); }}
+      .run.best .vm {{ color: {ACCENT}; }}
       .role-now .k {{ font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: {FAINT}; }}
       .role-now .v {{ font-size: 1.05rem; font-weight: 700; color: {TEXT}; line-height: 1.2; }}
       /* The menu that opens: a plain list, icon + name, the current view tinted and ticked */
@@ -787,6 +834,41 @@ def summary_html(data, analysis, official, baseline=None):
         orders = cell("Planned", f'{len(data["orders"])}', "")
     html('<div class="grid3">' + score + orders
          + cell("Empty km", f'{empty_km:,}<span class="unit">km</span>', f"of {total_km:,} km driven") + "</div>")
+
+
+def data_html(health):
+    """Dispatcher → Data tab: pipeline layers with row counts, check status, lineage of the plan, run history."""
+    layers = health["layers"]
+    notes = {"raw": "append-only", "prep": "rebuilt each run", "results": "append-only"}
+    steps = "".join(
+        f'<div class="layer"><div class="ov">{name}.*</div><div class="vm" title="{rows:,} rows">{compact(rows)}<span class="unit">rows</span></div>'
+        f'<div class="cap">{n} tables<br>{notes[name]}</div></div>' + ('<div class="arrow">→</div>' if name != "results" else "")
+        for name, (n, rows) in layers.items())
+    ok = not health["failed"]
+    status = (f'<span class="badge ok">✓ {health["n_checks"]}/{health["n_checks"]} checks passed</span>' if ok else
+              f'<span class="badge bad">✕ {len(health["failed"])} of {health["n_checks"]} checks failed</span>')
+    if health["warned"]:
+        status += f' <span class="badge warn">{len(health["warned"])} warning(s)</span>'
+    snap = health["snapshot"]
+    plan_snap, algo, source, made, same = health["plan"] or (None, None, None, None, None)
+    src = "scored by the official API" if source in ("score", "simulate") else "scored by the local simulator"
+    lineage = (f'<div class="kv"><span class="cap">Data snapshot</span><span class="body">{escape(snap[0][:15]) if snap else "—"}</span></div>'
+               f'<div class="kv"><span class="cap">Fetched</span><span class="body">{escape(snap[1]) if snap else "—"}</span></div>'
+               f'<div class="kv"><span class="cap">Plan shown</span><span class="body">{escape(algo or "?")} · {escape(made or "")}</span></div>'
+               f'<div class="kv"><span class="cap">Score</span><span class="body">{src}</span></div>'
+               f'<div class="kv"><span class="cap">Built on</span><span class="body">'
+               f'{"current snapshot ✓" if same else "older snapshot " + escape((plan_snap or "?")[:15])}</span></div>')
+    best = max((h[3] for h in health["history"] if h[6] == 0 and h[3] is not None), default=None)
+    rows = "".join(
+        f'<div class="run{" best" if score == best else ""}"><span class="cap">{escape(when)}</span>'
+        f'<span class="body">{escape(algo or "")}{" · API" if src_ in ("score", "simulate") else ""}</span>'
+        f'<span class="cap">{done}/{total}</span><span class="vm">{score:.2f}</span></div>'
+        for when, algo, src_, score, done, total, viol in reversed(health["history"]) if score is not None)
+    html(f'<div class="ov" style="margin:2px 0 8px">Pipeline</div><div class="layers">{steps}</div>'
+         f'<div style="margin:12px 0 4px">{status}</div>'
+         f'<div class="hair" style="margin:12px 0"></div><div class="ov" style="margin-bottom:6px">Lineage</div>{lineage}'
+         f'<div class="hair" style="margin:12px 0"></div><div class="ov" style="margin-bottom:6px">'
+         f'Solver runs ({len(health["history"])})</div><div class="runs">{rows}</div>')
 
 
 def dock_head_html(title, meta):
@@ -1573,11 +1655,14 @@ with dock:
                 summary_html(data, analysis, official, baseline_score(scenario))
                 html('<div class="hair"></div>')
                 trucks_tab = f"Trucks ({len(used_trucks)})"
-                tabs = [trucks_tab] + ([f"Unserved orders ({len(not_in_plan)})"] if not_in_plan else [])
+                unserved_tab = f"Unserved ({len(not_in_plan)})"
+                tabs = [trucks_tab] + ([unserved_tab] if not_in_plan else []) + ["Data"]
                 tab = st.segmented_control("List", tabs, key="dock_tab", default=trucks_tab,
                                            label_visibility="collapsed") or trucks_tab
                 if tab == trucks_tab:
                     fleet_list_html(data, analysis, colours, role)
+                elif tab == "Data":
+                    data_html(data_health(scenario, plan_file))
                 else:
                     not_served_html(data, not_in_plan, explain_unserved(scenario, plan_file))
             else:
