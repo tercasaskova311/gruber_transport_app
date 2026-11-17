@@ -7,3 +7,4 @@ data/api_responses/
 .DS_Store
 data/scenarios_*.json
 .vscode/
+.streamlit/secrets.toml

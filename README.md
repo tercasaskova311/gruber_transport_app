@@ -86,6 +86,21 @@ docker run --rm -p 8501:8501 logiwise
 
 `make help` lists every target. None of them call the scoring API.
 
+## Dashboard and sign-in
+
+The Streamlit dashboard opens on a sign-in screen. The account decides what you see:
+
+| Role | Sees | Can do |
+|---|---|---|
+| **Dispatcher** | every route on the map, fleet numbers, unserved orders with the reason each one was left out | open any truck, preview the driver view |
+| **Driver** | only the truck on their account | step through the stops, mark each one done |
+
+Demo accounts (shown on the sign-in screen): `dispatcher` / `dispatch-demo` and `driver` / `driver-demo`.
+Real accounts go in `.streamlit/secrets.toml` (template: [`.streamlit/secrets.example.toml`](.streamlit/secrets.example.toml));
+once that file has users, the demo accounts are switched off. Passwords are stored as salted
+PBKDF2 hashes (`python dashboard/auth.py '<password>'` makes one), and five wrong passwords in a
+row pause sign-in for 30 seconds. This is demo-grade access control, not user management.
+
 ## Team
 
 Team 5 at the Gruber Logistics hackathon 2026. Data architecture and the DuckDB pipeline
