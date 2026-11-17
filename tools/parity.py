@@ -175,6 +175,8 @@ def cmd_compare(a):
             else:
                 ok += 1
     print(f"\n{ok}/{n} responses match exactly (numeric tol {a.tol})")
+    if n == 0 or ok < n:
+        sys.exit(1)                      # CI fails on any mismatch (or if no cases were found)
 
 
 def main():

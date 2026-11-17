@@ -1,7 +1,122 @@
-# Logi-Wise · team 5
+# Logi-Wise · truck planning for Gruber Logistics
 
-Gruber Logistics hackathon 2026. A pickup-and-delivery truck planner that maximises the official
-score, an exact local copy of the official simulator, and a dashboard for dispatchers and drivers.
+[![CI](https://github.com/tercasaskova311/logiwise/actions/workflows/ci.yml/badge.svg)](https://github.com/tercasaskova311/logiwise/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
+![DuckDB](https://img.shields.io/badge/storage-DuckDB-yellow)
+![Streamlit](https://img.shields.io/badge/UI-Streamlit-red)
+
+A pickup-and-delivery truck planner built at the Gruber Logistics hackathon 2026
+(NOI Techpark, team 5). It pulls orders, trucks and distances from Gruber's API into a layered
+DuckDB pipeline, plans routes with a search that is scored by an exact local copy of the official
+simulator, and shows the result to dispatchers, drivers and managers on a map.
+
+**Result: 932.26 / 1000 on the competitive scenario (200 orders, 25 trucks), zero rule violations.
+Every API submission returned exactly the score our local simulator predicted.**
+
+## Highlights
+
+- **Layered data pipeline.** `raw.*` keeps every API response as an append-only snapshot,
+  `prep.*` is rebuilt from SQL on every run, `results.*` stores every scored plan. Re-running is
+  idempotent: a new snapshot is written only when the API data actually changed.
+- **Data-quality gates.** Grain checks on every `prep` table (catches joins that duplicate rows),
+  about 20 domain checks (symmetric distance matrix, contiguous positions, every order carriable by some truck, time windows that can be met). A failing check stops the pipeline.
+- **Exact simulator.** A local Validate / Simulate / Score that matches the official API on
+  156 saved responses to the last digit, so the solver never spends the 3 scoring calls blindly.
+- **Tested in CI.** Unit tests, an end-to-end pipeline run against a fake API, the data-quality
+  checks on the committed database and the simulator parity check run on every push.
+- **One command to run.** `make ci`, `make dashboard` or `docker run`, no API key needed: the
+  committed DuckDB file holds all scenarios and scored plans.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    API["Gruber API<br/>scenarios · cities · trucks<br/>orders · distance matrix"]
+
+    subgraph DB["DuckDB · data/hackathon.duckdb"]
+        RAW["<b>raw.*</b><br/>append-only snapshots<br/>+ cur_* views"]
+        PREP["<b>prep.*</b><br/>solver features<br/>rebuilt every run"]
+        RES["<b>results.*</b><br/>runs · trucks · stops<br/>violations"]
+    end
+
+    API -- "fetch.py<br/>retries · change detection" --> RAW
+    RAW -- "prepare.sql<br/>+ checks.py" --> PREP
+    PREP -- "load_from_db()<br/>one read into memory" --> SOLVER["Solver<br/>greedy + ALNS"]
+    SIM["Local simulator<br/>exact official score"] <--> SOLVER
+    SOLVER -- "save_run()" --> RES
+    RES --> DASH["Dashboard<br/>dispatcher · driver · manager"]
+    PREP --> DASH
+    SOLVER -. "submit.py<br/>dry run · confirm · log" .-> API
+```
+
+| Layer | Tables | Written by | Rule |
+|---|---|---|---|
+| `raw` | `snapshots`, `cities`, `trucks`, `orders`, `distances`, views `cur_*` | `ingestion/fetch.py` | Never updated or deleted. A SHA-256 fingerprint of the API data decides whether a new `snapshot_id` is needed. |
+| `prep` | `city_index`, `city_distances`, `truck_features`, `order_base`, `order_features`, `order_truck_options`, `scenario_summary` | `ingestion/prepare.sql` | Dropped and rebuilt in one transaction; every table has a declared grain that `checks.py` enforces. |
+| `results` | `runs`, `run_trucks`, `run_stops`, `run_violations` | `ingestion/load.py` `save_run()` | Append only. Every plan the team evaluated, with score, metrics and per-stop schedule. |
+
+Why it is built this way:
+
+- **Append-only raw data** keeps runs reproducible. A server restart regenerates all scenarios,
+  so every plan in `results.*` keeps a pointer to the exact snapshot it was built on.
+- **Features in SQL, solving in Python.** The heavy joins (which truck can carry which order,
+  earliest possible arrival, slack in each time window) live in `prepare.sql`. The solver reads
+  them once into plain lists, because a DuckDB query is about 14,000 times slower than a list
+  lookup inside a search loop.
+- **Every key includes `scenario_id`.** City, truck and order ids repeat across scenarios;
+  the grain checks catch any join that forgets it.
+
+Full description of every table and column: [`ingestion/README.md`](ingestion/README.md).
+
+## Quick start
+
+```bash
+pip install -r requirements.txt
+make ci           # tests, pipeline against a fake API, data-quality checks, simulator parity
+make dashboard    # http://localhost:8501
+make solve        # solver on scenario_big for 60 s
+```
+
+Or with Docker, no local Python needed:
+
+```bash
+docker build -t logiwise .
+docker run --rm -p 8501:8501 logiwise
+```
+
+`make help` lists every target. None of them call the scoring API.
+
+## Dashboard and sign-in
+
+The Streamlit dashboard opens on a sign-in screen. The account decides what you see:
+
+| Role | Sees | Can do |
+|---|---|---|
+| **Dispatcher** | every route on the map, fleet numbers, unserved orders with the reason each one was left out, and a **Data** tab: row counts per pipeline layer, live data-quality check status, which snapshot the plan was built on, and the history of solver runs | open any truck, preview the driver view |
+| **Driver** | only the truck on their account | step through the stops, mark each one done |
+
+Demo accounts (shown on the sign-in screen): `dispatcher` / `dispatch-demo` and `driver` / `driver-demo`.
+Real accounts go in `.streamlit/secrets.toml` (template: [`.streamlit/secrets.example.toml`](.streamlit/secrets.example.toml));
+once that file has users, the demo accounts are switched off. Passwords are stored as salted
+PBKDF2 hashes (`python dashboard/auth.py '<password>'` makes one), and five wrong passwords in a
+row pause sign-in for 30 seconds. This is demo-grade access control, not user management.
+
+## Deploy the demo (Streamlit Community Cloud, free)
+
+1. Sign in at [share.streamlit.io](https://share.streamlit.io) with GitHub and click **Create app**.
+2. Repository `tercasaskova311/logiwise`, branch `main`, main file `dashboard/app.py`.
+   Under **Advanced settings** pick Python 3.12.
+3. Deploy. The committed `data/hackathon.duckdb` is all the app needs; no API key.
+4. Optional: paste real accounts into the app's **Secrets** (format in
+   `.streamlit/secrets.example.toml`). Without them the demo accounts stay on.
+
+The same image also runs anywhere Docker does (`docker run -p 8501:8501 logiwise`).
+
+## Team
+
+Team 5 at the Gruber Logistics hackathon 2026. Data architecture and the DuckDB pipeline
+(`ingestion/`): [tercasaskova311](https://github.com/tercasaskova311). Solver, simulator and
+dashboard were built together by the team; see the commit history for details.
 
 Rules, domain details and team workflow: [CLAUDE.md](CLAUDE.md) and [docs/semantics.md](docs/semantics.md).
 
@@ -15,6 +130,7 @@ Rules, domain details and team workflow: [CLAUDE.md](CLAUDE.md) and [docs/semant
 | `dashboard/` | Streamlit map: routes on real roads, load on board, unserved orders |
 | `tools/` | Parity checks, portfolio runs, plan polishing, benchmarks |
 | `tests/` | pytest: simulator parity + solver evaluator |
+| `.github/workflows/` | CI: tests, pipeline end-to-end, data checks, parity |
 | `docs/` | Challenge PDF, API docs, verified rules |
 | `data/` | `hackathon.duckdb` (all scored plans and API scores), scenario snapshots, road shapes, parity cases |
 

@@ -24,6 +24,7 @@ from streamlit_folium import st_folium
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import roads                                    # noqa: E402  real road shapes for the map (cached file)
+import auth                                     # noqa: E402  sign-in: accounts, roles, lockout
 
 
 # =============================================================================
@@ -264,6 +265,37 @@ def explain_unserved(scenario, plan_file):
     return explain.explain_plan(load_from_db(scenario), load_plan(scenario, plan_file))
 
 
+@st.cache_data(ttl=60, show_spinner=False)
+def data_health(scenario, plan_file):
+    """What the Data tab shows: the pipeline layers, the data-quality checks and where the plan came from.
+    Runs the same ERROR / WARN queries as ingestion/checks.py, on a read-only connection."""
+    ingestion_dir = str(HERE.parent)
+    if ingestion_dir not in sys.path:
+        sys.path.insert(0, ingestion_dir)
+    from ingestion import checks                      # noqa: PLC0415
+    with _db() as con:
+        snap = con.execute("""SELECT snapshot_id, strftime(fetched_at, '%d %b %Y %H:%M'), fingerprint
+                              FROM raw.cur_snapshots WHERE scenario_id = ?""", [scenario]).fetchone()
+        layers = {}
+        for schema in ("raw", "prep", "results"):
+            tables = [t for (t,) in con.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE'",
+                [schema]).fetchall()]
+            rows = sum(con.execute(f'SELECT count(*) FROM {schema}."{t}"').fetchone()[0] for t in tables)
+            layers[schema] = (len(tables), rows)
+        failed = [name for name, sql in checks.ERRORS.items() if con.execute(sql).fetchall()]
+        warned = [name for name, sql in checks.WARNINGS.items() if con.execute(sql).fetchall()]
+        plan_row = con.execute("""SELECT r.snapshot_id, r.algo, r.source, strftime(r.created_at, '%d %b %Y %H:%M'),
+                                         r.snapshot_id = s.snapshot_id
+                                  FROM results.runs r LEFT JOIN raw.cur_snapshots s USING (scenario_id)
+                                  WHERE r.run_id = ?""", [_run_id(plan_file)]).fetchone()
+        history = con.execute("""SELECT strftime(created_at, '%d %b %H:%M'), algo, source, score,
+                                        orders_fulfilled, orders_total, n_violations
+                                 FROM results.runs WHERE scenario_id = ? ORDER BY created_at""", [scenario]).fetchall()
+    return dict(snapshot=snap, layers=layers, n_checks=len(checks.ERRORS), failed=failed, warned=warned,
+                plan=plan_row, history=history)
+
+
 @st.cache_data(ttl=30)
 def baseline_score(scenario):
     """Best score of the plain greedy start (algo 'construct'), or None if it was never run."""
@@ -417,6 +449,25 @@ def inject_css():
       .st-key-role_menu button:hover {{ background: {HOVER} !important; }}
       .st-key-role_menu button span {{ font-size: 1.35rem; color: {TEXT} !important; }}
       .st-key-role_menu [data-testid="stPopoverButton"] > div > :nth-child(2) {{ display: none !important; }}  /* no ^ arrow */
+      .who {{ display: flex; align-items: center; gap: 10px; padding: 4px 4px 10px; border-bottom: 1px solid {HAIR}; margin-bottom: 6px; }}
+      .avatar {{ width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none;
+                 background: color-mix(in srgb, {ACCENT} 18%, transparent); color: {ACCENT}; font-weight: 800; font-size: 0.85rem; }}
+      .layers {{ display: flex; align-items: stretch; gap: 6px; }}
+      .layer {{ flex: 1; min-width: 0; padding: 10px 10px 8px; border-radius: 12px; border: 1px solid {HAIR};
+                background: color-mix(in srgb, {ROUTE_INK} 5%, transparent); }}
+      .layer .cap {{ white-space: normal; }}
+      .layers .arrow {{ align-self: center; color: {FAINT}; font-weight: 700; }}
+      .badge {{ display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; }}
+      .badge.ok {{ background: color-mix(in srgb, {ACCENT} 16%, transparent); color: {ACCENT}; }}
+      .badge.bad {{ background: color-mix(in srgb, {RED} 14%, transparent); color: {RED}; }}
+      .badge.warn {{ background: color-mix(in srgb, #E5A500 18%, transparent); color: #B07F00; }}
+      .kv {{ display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }}
+      .runs {{ display: flex; flex-direction: column; gap: 2px; }}
+      .run {{ display: grid; grid-template-columns: 82px 1fr 54px 64px; align-items: center; gap: 8px;
+              padding: 5px 8px; border-radius: 8px; }}
+      .run .vm {{ text-align: right; font-size: 0.9rem; }}
+      .run.best {{ background: color-mix(in srgb, {ACCENT} 12%, transparent); }}
+      .run.best .vm {{ color: {ACCENT}; }}
       .role-now .k {{ font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: {FAINT}; }}
       .role-now .v {{ font-size: 1.05rem; font-weight: 700; color: {TEXT}; line-height: 1.2; }}
       /* The menu that opens: a plain list, icon + name, the current view tinted and ticked */
@@ -783,6 +834,41 @@ def summary_html(data, analysis, official, baseline=None):
         orders = cell("Planned", f'{len(data["orders"])}', "")
     html('<div class="grid3">' + score + orders
          + cell("Empty km", f'{empty_km:,}<span class="unit">km</span>', f"of {total_km:,} km driven") + "</div>")
+
+
+def data_html(health):
+    """Dispatcher → Data tab: pipeline layers with row counts, check status, lineage of the plan, run history."""
+    layers = health["layers"]
+    notes = {"raw": "append-only", "prep": "rebuilt each run", "results": "append-only"}
+    steps = "".join(
+        f'<div class="layer"><div class="ov">{name}.*</div><div class="vm" title="{rows:,} rows">{compact(rows)}<span class="unit">rows</span></div>'
+        f'<div class="cap">{n} tables<br>{notes[name]}</div></div>' + ('<div class="arrow">→</div>' if name != "results" else "")
+        for name, (n, rows) in layers.items())
+    ok = not health["failed"]
+    status = (f'<span class="badge ok">✓ {health["n_checks"]}/{health["n_checks"]} checks passed</span>' if ok else
+              f'<span class="badge bad">✕ {len(health["failed"])} of {health["n_checks"]} checks failed</span>')
+    if health["warned"]:
+        status += f' <span class="badge warn">{len(health["warned"])} warning(s)</span>'
+    snap = health["snapshot"]
+    plan_snap, algo, source, made, same = health["plan"] or (None, None, None, None, None)
+    src = "scored by the official API" if source in ("score", "simulate") else "scored by the local simulator"
+    lineage = (f'<div class="kv"><span class="cap">Data snapshot</span><span class="body">{escape(snap[0][:15]) if snap else "—"}</span></div>'
+               f'<div class="kv"><span class="cap">Fetched</span><span class="body">{escape(snap[1]) if snap else "—"}</span></div>'
+               f'<div class="kv"><span class="cap">Plan shown</span><span class="body">{escape(algo or "?")} · {escape(made or "")}</span></div>'
+               f'<div class="kv"><span class="cap">Score</span><span class="body">{src}</span></div>'
+               f'<div class="kv"><span class="cap">Built on</span><span class="body">'
+               f'{"current snapshot ✓" if same else "older snapshot " + escape((plan_snap or "?")[:15])}</span></div>')
+    best = max((h[3] for h in health["history"] if h[6] == 0 and h[3] is not None), default=None)
+    rows = "".join(
+        f'<div class="run{" best" if score == best else ""}"><span class="cap">{escape(when)}</span>'
+        f'<span class="body">{escape(algo or "")}{" · API" if src_ in ("score", "simulate") else ""}</span>'
+        f'<span class="cap">{done}/{total}</span><span class="vm">{score:.2f}</span></div>'
+        for when, algo, src_, score, done, total, viol in reversed(health["history"]) if score is not None)
+    html(f'<div class="ov" style="margin:2px 0 8px">Pipeline</div><div class="layers">{steps}</div>'
+         f'<div style="margin:12px 0 4px">{status}</div>'
+         f'<div class="hair" style="margin:12px 0"></div><div class="ov" style="margin-bottom:6px">Lineage</div>{lineage}'
+         f'<div class="hair" style="margin:12px 0"></div><div class="ov" style="margin-bottom:6px">'
+         f'Solver runs ({len(health["history"])})</div><div class="runs">{rows}</div>')
 
 
 def dock_head_html(title, meta):
@@ -1270,8 +1356,100 @@ html(f"""<style>
   .st-key-data_menu {{ display: flex; justify-content: flex-end; }}
 </style>""")
 
-if st.session_state.get("role") not in ROLE_PRESETS:     # first visit, or "Manager" from before
-    st.session_state.role = "Dispatcher"
+
+
+# ---- Sign-in: the account decides the role (and, for a driver, the truck) ------------------
+def login_css():
+    html(f"""<style>
+      [data-testid="stApp"] {{ background:
+          radial-gradient(1200px 600px at 12% -10%, color-mix(in srgb, {ROUTE_INK} 16%, transparent), transparent 60%),
+          radial-gradient(900px 500px at 100% 110%, color-mix(in srgb, {ACCENT} 18%, transparent), transparent 60%),
+          {PAGE_BG}; }}
+      .block-container, [data-testid="stMainBlockContainer"] {{ padding-top: 9vh !important; }}
+      .st-key-login {{ background: {PANEL}; border: 1px solid {HAIR}; border-radius: 22px; padding: 30px 30px 24px;
+                       box-shadow: 0 2px 4px rgba(20,16,40,0.04), 0 24px 60px rgba(20,16,40,0.14); }}
+      .login-brand {{ display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }}
+      .login-title {{ font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em; color: {TEXT}; line-height: 1.15; }}
+      .login-sub {{ font-size: 0.9rem; color: {MUTED}; margin: 4px 0 18px; line-height: 1.45; }}
+      .st-key-login [data-testid="stForm"] {{ border: none; padding: 0; }}
+      .st-key-login [data-testid="stFormSubmitButton"] button {{ width: 100%; min-height: 44px; border-radius: 12px;
+            background: {BTN_PRIMARY}; color: {BTN_PRIMARY_TEXT}; border: none; box-shadow: {BTN_SHADOW}; font-weight: 700; }}
+      .demo-head {{ display: flex; align-items: center; gap: 10px; margin: 18px 0 10px; color: {FAINT};
+                    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }}
+      .demo-head::before, .demo-head::after {{ content: ""; flex: 1; height: 1px; background: {HAIR}; }}
+      .st-key-demo_buttons button {{ border-radius: 12px; min-height: 52px; background: {BTN_SECONDARY_BG};
+            border: 1px solid {HAIR}; }}
+      .st-key-demo_buttons button:hover {{ border-color: {ACCENT}; background: {HOVER}; }}
+      .login-foot {{ text-align: center; font-size: 0.74rem; color: {FAINT}; margin-top: 16px; line-height: 1.5; }}
+    </style>""")
+
+
+def sign_in(user):
+    st.session_state.user = user
+    st.session_state.role = user.role
+    auth.Throttle(st.session_state).success()
+
+
+def sign_out():
+    for key in [k for k in st.session_state if k not in ("theme",)]:
+        del st.session_state[key]
+
+
+def demo_sign_in(username):
+    users, _ = auth.load_users(st.secrets)
+    user = auth.authenticate(username, auth.DEMO_PASSWORDS[username], users)
+    if user:
+        sign_in(user)
+
+
+def login_page():
+    users, is_demo = auth.load_users(st.secrets)
+    throttle = auth.Throttle(st.session_state)
+    login_css()
+    _, mid, _ = st.columns([1, 1.05, 1])
+    with mid, st.container(key="login"):
+        mark = (f'<svg width="44" height="44" viewBox="0 0 34 34"><rect width="34" height="34" rx="10" fill="{ROUTE_INK}"/>'
+                f'<path d="M9 24 C 9 14, 25 20, 25 10" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>'
+                f'<circle cx="9" cy="24" r="3.6" fill="{ROUTE_INK}" stroke="{GREEN}" stroke-width="2.4"/>'
+                f'<circle cx="25" cy="10" r="3.6" fill="#FFFFFF"/></svg>')
+        html(f'<div class="login-brand">{mark}<div><div class="brand-title">Logi<span>-Wise</span></div>'
+             f'<div class="ov">Truck planning · Gruber Logistics</div></div></div>'
+             f'<div class="login-title">Sign in</div>'
+             f'<div class="login-sub">Dispatchers see the whole fleet. Drivers see their own truck, stop by stop.</div>')
+        wait = throttle.locked_for()
+        with st.form("login_form", border=False):
+            username = st.text_input("Username", autocomplete="username", placeholder="e.g. dispatcher")
+            password = st.text_input("Password", type="password", autocomplete="current-password")
+            submitted = st.form_submit_button("Sign in", disabled=wait > 0, type="primary", width="stretch")
+        if wait > 0:
+            st.warning(f"Too many wrong passwords. Try again in {wait} s.", icon=":material/lock_clock:")
+        elif submitted:
+            user = auth.authenticate(username, password, users)
+            if user:
+                sign_in(user)
+                st.rerun()
+            throttle.failure()
+            st.error("Wrong username or password.", icon=":material/error:")
+        if is_demo:
+            html('<div class="demo-head">Demo accounts</div>')
+            with st.container(key="demo_buttons", horizontal=True, gap="small"):
+                st.button("Dispatcher", icon=":material/hub:", on_click=demo_sign_in, args=("dispatcher",),
+                          width="stretch", help=f"dispatcher / {auth.DEMO_PASSWORDS['dispatcher']}")
+                st.button("Driver · T05", icon=":material/local_shipping:", on_click=demo_sign_in, args=("driver",),
+                          width="stretch", help=f"driver / {auth.DEMO_PASSWORDS['driver']}")
+            html(f'<div class="login-foot">Or sign in with <b>dispatcher</b> / {auth.DEMO_PASSWORDS["dispatcher"]} '
+                 f'or <b>driver</b> / {auth.DEMO_PASSWORDS["driver"]}.<br>Plans and scores are from the hackathon data.</div>')
+
+
+user = st.session_state.get("user")
+if user is None:
+    login_page()
+    st.stop()
+
+# A driver always sees the driver view; a dispatcher may preview it.
+allowed_roles = ["Dispatcher", "Driver"] if user.role == "Dispatcher" else ["Driver"]
+if st.session_state.get("role") not in allowed_roles:
+    st.session_state.role = allowed_roles[0]
 
 scenario = SCENARIO
 if scenario not in list_scenarios():
@@ -1315,17 +1493,29 @@ def set_role(name):
 
 with st.container(key="rolebar", horizontal=True, vertical_alignment="center"):
     with st.container(key="role_menu", width="content"):
-        with st.popover("", icon=":material/menu:", help="Switch view"):
+        with st.popover("", icon=":material/menu:", help="Account and views"):
+            html(f'<div class="who"><div class="avatar">{escape(user.initials)}</div><div style="min-width:0">'
+                 f'<div class="body strong">{escape(user.name)}</div>'
+                 f'<div class="cap">{escape(user.role)}{" · truck " + escape(user.truck) if user.truck else ""}</div>'
+                 f'</div></div>')
             with st.container(key="role_options"):
-                for name, (icon, hint) in ROLE_INFO.items():
-                    st.button(name, key=f"role_{name}", icon=icon, on_click=set_role, args=(name,),
-                              type="tertiary", help=hint, width="stretch")
+                if len(allowed_roles) > 1:
+                    html('<div class="ov" style="margin:4px 4px 2px">View</div>')
+                    for name in allowed_roles:
+                        icon, hint = ROLE_INFO[name]
+                        label = name if name == user.role else f"{name} (preview)"
+                        st.button(label, key=f"role_{name}", icon=icon, on_click=set_role, args=(name,),
+                                  type="tertiary", help=hint, width="stretch")
+                html('<div class="hair" style="margin:6px 0"></div>')
+                st.button("Sign out", key="sign_out", icon=":material/logout:", on_click=sign_out,
+                          type="tertiary", width="stretch")
                 now = st.session_state.role                 # current view: tinted, with a tick on the right
                 html(f'<style>.st-key-role_{now} button {{ background: color-mix(in srgb, {ACCENT} 14%, transparent) !important; }}'
                      f'.st-key-role_{now} button p {{ color: {ACCENT} !important; font-weight: 700 !important; }}'
                      f'.st-key-role_{now} button span {{ color: {ACCENT} !important; }}'
                      f'.st-key-role_{now} button::after {{ content: "✓"; margin-left: auto; color: {ACCENT}; font-weight: 800; }}</style>')
-    html(f'<div class="role-now"><div class="k">View</div><div class="v">{st.session_state.role}</div></div>')
+    html(f'<div class="role-now"><div class="k">{escape(user.name)}</div><div class="v">{st.session_state.role}'
+         f'{"" if st.session_state.role == user.role else " preview"}</div></div>')
 
 # ---- Top-left of the map: brand · refresh · status · theme, as floating pills ---------------
 with st.container(key="topbar", horizontal=True, vertical_alignment="center", gap="small", width="content"):
@@ -1398,14 +1588,21 @@ used_trucks = [t for t in sorted(analysis) if analysis[t]["orders"]]
 # Truck picker: the id first, then only what you choose a truck by (type, capacity in tonnes)
 labels = {tid: f"{tid}  ·  {data['trucks'][tid]['type']} · {data['trucks'][tid]['capacity_kg'] / 1000:g} t"
           for tid in analysis}
-truck_options = used_trucks if is_driver else ["All trucks"] + used_trucks
+if user.role == "Driver":                       # a driver's account names their truck: nothing else to pick
+    truck_options = [user.truck] if user.truck in analysis else []
+    if not truck_options:
+        st.error(f"Truck {user.truck} on your account is not in the current plan. Ask your dispatcher.")
+        st.stop()
+else:
+    truck_options = used_trucks if is_driver else ["All trucks"] + used_trucks
 selected = None
 
 # ---- Side panel: what is inside depends on the role -----------------------------------------
 with dock:
     head = st.empty()
     choice = st.selectbox("Your truck" if is_driver else "Truck", truck_options, key=f"truck_{role}",
-                          format_func=lambda t: labels.get(t, t), label_visibility="collapsed")
+                          format_func=lambda t: labels.get(t, t), label_visibility="collapsed",
+                          disabled=len(truck_options) == 1)
     selected = None if choice == "All trucks" else choice
     if selected:                                   # the panel's light picks up the truck's colour
         html(f"<style>.st-key-dock, .st-key-dock_static, .st-key-picker {{ --truck: {colours[selected]}; }}</style>")
@@ -1458,11 +1655,14 @@ with dock:
                 summary_html(data, analysis, official, baseline_score(scenario))
                 html('<div class="hair"></div>')
                 trucks_tab = f"Trucks ({len(used_trucks)})"
-                tabs = [trucks_tab] + ([f"Unserved orders ({len(not_in_plan)})"] if not_in_plan else [])
+                unserved_tab = f"Unserved ({len(not_in_plan)})"
+                tabs = [trucks_tab] + ([unserved_tab] if not_in_plan else []) + ["Data"]
                 tab = st.segmented_control("List", tabs, key="dock_tab", default=trucks_tab,
                                            label_visibility="collapsed") or trucks_tab
                 if tab == trucks_tab:
                     fleet_list_html(data, analysis, colours, role)
+                elif tab == "Data":
+                    data_html(data_health(scenario, plan_file))
                 else:
                     not_served_html(data, not_in_plan, explain_unserved(scenario, plan_file))
             else:

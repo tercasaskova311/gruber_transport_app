@@ -1,0 +1,54 @@
+name: CI
+
+# Runs on every push and pull request. No step calls the Gruber API:
+# the pipeline test uses a local fake API, and all scoring is done by the local simulator.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Unit tests (simulator, solver, loaders)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q tests
+
+  pipeline:
+    name: Data pipeline (fake API → raw → prep → checks → results)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: End-to-end ingestion against a fake API (idempotency + change detection)
+        run: bash ingestion/tests/test_pipeline.sh
+      - name: Rebuild prep.* from the committed database and run data-quality checks
+        run: |
+          cp data/hackathon.duckdb "$RUNNER_TEMP/ci.duckdb"
+          DB_PATH="$RUNNER_TEMP/ci.duckdb" python ingestion/prepare.py
+
+  parity:
+    name: Simulator parity (local score vs 156 saved API responses)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m tools.parity compare

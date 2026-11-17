@@ -1,0 +1,9 @@
+.git
+.env
+**/__pycache__
+*.pyc
+.pytest_cache
+out/
+solver/out/
+.vscode/
+.DS_Store
